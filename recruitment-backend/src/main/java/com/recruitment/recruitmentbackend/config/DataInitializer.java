@@ -20,20 +20,34 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         Role superAdminRole = seedRole("SUPER_ADMIN");
-        seedRole("ADMIN");
+        Role adminRole = seedRole("ADMIN");
         seedRole("EMPLOYEE");
 
-        if (!userRepository.existsByEmail("admin@insa.gov.et")) {
-            User user = new User();
-            user.setFullName("Super Admin");
-            user.setUsername("superadmin");
-            user.setEmail("admin@insa.gov.et");
-            user.setPassword(passwordEncoder.encode("admin123"));
-            user.setRole(superAdminRole);
-            user.setStatus(User.UserStatus.ACTIVE);
-            userRepository.save(user);
-            System.out.println("✅ Super admin seeded: admin@insa.gov.et / admin123");
-        }
+        // Delete and recreate admin user to ensure correct password
+        userRepository.findByEmail("admin@insa.gov.et").ifPresent(userRepository::delete);
+        
+        User user = new User();
+        user.setFullName("Super Admin");
+        user.setUsername("superadmin");
+        user.setEmail("admin@insa.gov.et");
+        user.setPassword(passwordEncoder.encode("admin123"));
+        user.setRole(superAdminRole);
+        user.setStatus(User.UserStatus.ACTIVE);
+        userRepository.save(user);
+        System.out.println("✅ Super admin seeded: admin@insa.gov.et / admin123");
+
+        // Create default recruiter/admin user
+        userRepository.findByEmail("tolman@gmail.com").ifPresent(userRepository::delete);
+        
+        User recruiter = new User();
+        recruiter.setFullName("HR Recruiter");
+        recruiter.setUsername("recruiter");
+        recruiter.setEmail("tolman@gmail.com");
+        recruiter.setPassword(passwordEncoder.encode("12345678"));
+        recruiter.setRole(adminRole);
+        recruiter.setStatus(User.UserStatus.ACTIVE);
+        userRepository.save(recruiter);
+        System.out.println("✅ Recruiter seeded: tolman@gmail.com / 12345678");
     }
 
     private Role seedRole(String name) {

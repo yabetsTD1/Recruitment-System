@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 // Menu per role
 const SUPER_ADMIN_MENU = [
@@ -103,56 +104,61 @@ export default function DashboardLayout({ children }) {
   const roleBadge = user ? getRoleBadgeColor(user.role) : "#2980b9";
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "'Segoe UI', sans-serif" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: "'Segoe UI', sans-serif" }}>
+      
+      {/* Header - Full Width at Top */}
+      <header style={{ background: "#d3d5d7ff", height: "65px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", zIndex: 100, borderBottom: "2px solid #9ca3af" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+          {/* INSA Logo */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "4px" }}>
+              <Image
+                src="/logo.png"
+                alt="INSA-ERP Logo"
+                width={50}
+                height={50}
+                style={{ borderRadius: "4px" }}
+              />
+            </div>
+            <div>
+              <span style={{ color: "#1f2937", fontWeight: "700", fontSize: "16px", letterSpacing: "0.5px", whiteSpace: "nowrap", display: "block" }}>INSA-ERP</span>
+              {user && (
+                <span style={{ fontSize: "10px", background: roleBadge, color: "white", padding: "2px 8px", borderRadius: "10px", fontWeight: "600", whiteSpace: "nowrap" }}>
+                  {(user.role || "").replace(/_/g, " ")}
+                </span>
+              )}
+            </div>
+          </div>
+          
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "none", border: "none", cursor: "pointer", color: "#4b5563", fontSize: "20px", padding: "6px", lineHeight: 1 }}>☰</button>
+          
+          <span style={{ color: "#9ca3af", fontSize: "20px", margin: "0 8px" }}>|</span>
+          <span style={{ color: "#6b7280", fontSize: "14px" }}>
+            {pathname === "/dashboard" ? "Dashboard" : pathname.split("/").filter(Boolean).pop()?.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <Link href="/" style={{ color: "#4b5563", textDecoration: "none", fontSize: "13px", padding: "6px 14px", border: "1px solid #d1d5db", borderRadius: "4px" }}>Public Site</Link>
+          <button onClick={handleLogout} style={{ background: "#e74c3c", color: "white", border: "none", borderRadius: "4px", padding: "6px 16px", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}>Logout</button>
+        </div>
+      </header>
+
+      {/* Content Area - Sidebar + Main */}
+      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
 
       {/* Sidebar */}
       <aside style={{
-        width: sidebarOpen ? "255px" : "0px",
-        minWidth: sidebarOpen ? "255px" : "0px",
+        width: sidebarOpen ? "160px" : "70px",
+        minWidth: sidebarOpen ? "240px" : "50px",
         transition: "all 0.3s ease",
-        overflow: "hidden",
-        background: "#2c3e50",
+        overflow: sidebarOpen ? "hidden" : "visible",
+        background: "#031526ff",
         display: "flex",
         flexDirection: "column",
         flexShrink: 0,
         boxShadow: "2px 0 8px rgba(0,0,0,0.2)",
+        marginTop: "-1px",
       }}>
-
-        {/* Logo */}
-        <div style={{ padding: "12px 16px", background: "#243342", display: "flex", alignItems: "center", gap: "10px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
-          {/* INSA SVG Logo */}
-          <svg width="42" height="46" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
-            {/* Shield — left half red, right half blue */}
-            <path d="M50 4 L10 22 L10 62 Q10 88 50 102 Q90 88 90 62 L90 22 Z" fill="none" stroke="url(#shieldGrad)" strokeWidth="5" strokeLinejoin="round"/>
-            <defs>
-              <linearGradient id="shieldGrad" x1="10" y1="0" x2="90" y2="0" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#c0392b"/>
-                <stop offset="50%" stopColor="#8e44ad"/>
-                <stop offset="100%" stopColor="#2980b9"/>
-              </linearGradient>
-            </defs>
-            {/* Key stem */}
-            <rect x="47" y="54" width="6" height="30" rx="2" fill="#7f8c8d"/>
-            <rect x="47" y="74" width="10" height="3" rx="1" fill="#555"/>
-            <rect x="47" y="80" width="7" height="3" rx="1" fill="#555"/>
-            {/* Outer red ring */}
-            <circle cx="50" cy="40" r="18" fill="none" stroke="#c0392b" strokeWidth="5"/>
-            {/* White ring */}
-            <circle cx="50" cy="40" r="12" fill="white"/>
-            {/* Inner dark circle (key head) */}
-            <circle cx="50" cy="40" r="8" fill="#4a4a7a"/>
-            {/* Shine */}
-            <circle cx="47" cy="37" r="2.5" fill="rgba(255,255,255,0.35)"/>
-          </svg>
-          <div>
-            <span style={{ color: "white", fontWeight: "700", fontSize: "15px", letterSpacing: "0.5px", whiteSpace: "nowrap", display: "block" }}>INSA-ERP</span>
-            {user && (
-              <span style={{ fontSize: "10px", background: roleBadge, color: "white", padding: "1px 7px", borderRadius: "10px", fontWeight: "600", whiteSpace: "nowrap" }}>
-                {(user.role || "").replace(/_/g, " ")}
-              </span>
-            )}
-          </div>
-        </div>
 
         {/* Nav */}
         <nav style={{ flex: 1, overflowY: "auto", paddingTop: "6px" }}>
@@ -161,21 +167,25 @@ export default function DashboardLayout({ children }) {
               {item.children ? (
                 <>
                   <button onClick={() => toggleMenu(item.id)} style={{
-                    width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "10px 18px", border: "none", cursor: "pointer", textAlign: "left",
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: sidebarOpen ? "space-between" : "center",
+                    padding: sidebarOpen ? "10px 18px" : "10px 0", border: "none", cursor: "pointer", textAlign: "left",
                     background: expandedMenus[item.id] ? "rgba(41,128,185,0.3)" : isParentActive(item.children) ? "rgba(41,128,185,0.2)" : "transparent",
                     color: expandedMenus[item.id] ? "#5dade2" : "rgba(255,255,255,0.82)",
                     fontSize: "13px",
                     borderLeft: expandedMenus[item.id] || isParentActive(item.children) ? "3px solid #3498db" : "3px solid transparent",
-                  }}>
+                  }}
+                    title={!sidebarOpen ? item.label : ""}
+                  >
                     <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
-                      <span style={{ fontSize: "14px" }}>{item.icon}</span>
-                      <span style={{ fontWeight: "500", whiteSpace: "nowrap" }}>{item.label}</span>
+                      <span style={{ fontSize: "18px" }}>{item.icon}</span>
+                      {sidebarOpen && <span style={{ fontWeight: "500", whiteSpace: "nowrap" }}>{item.label}</span>}
                     </div>
-                    <span style={{ fontSize: "9px", transform: expandedMenus[item.id] ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.25s", display: "inline-block", color: expandedMenus[item.id] ? "#5dade2" : "rgba(255,255,255,0.4)", flexShrink: 0 }}>▶</span>
+                    {sidebarOpen && (
+                      <span style={{ fontSize: "9px", transform: expandedMenus[item.id] ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.25s", display: "inline-block", color: expandedMenus[item.id] ? "#5dade2" : "rgba(255,255,255,0.4)", flexShrink: 0 }}>▶</span>
+                    )}
                   </button>
                   <div style={{ maxHeight: expandedMenus[item.id] ? "900px" : "0px", overflow: "hidden", transition: "max-height 0.35s ease", background: "rgba(0,0,0,0.18)" }}>
-                    {item.children.map((child) => (
+                    {sidebarOpen && item.children.map((child) => (
                       <Link key={child.href} href={child.href} style={{
                         display: "flex", alignItems: "center", gap: "8px",
                         padding: "8px 16px 8px 40px", textDecoration: "none",
@@ -196,19 +206,20 @@ export default function DashboardLayout({ children }) {
                 </>
               ) : (
                 <Link href={item.href} style={{
-                  display: "flex", alignItems: "center", gap: "9px",
-                  padding: "10px 18px", textDecoration: "none",
+                  display: "flex", alignItems: "center", justifyContent: sidebarOpen ? "flex-start" : "center", gap: "9px",
+                  padding: sidebarOpen ? "10px 18px" : "10px 0", textDecoration: "none",
                   background: isActive(item.href) ? "#2980b9" : "transparent",
                   color: isActive(item.href) ? "white" : "rgba(255,255,255,0.82)",
                   fontSize: "13px", fontWeight: "500",
                   borderLeft: isActive(item.href) ? "3px solid #5dade2" : "3px solid transparent",
                   whiteSpace: "nowrap",
                 }}
+                  title={!sidebarOpen ? item.label : ""}
                   onMouseEnter={(e) => { if (!isActive(item.href)) e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
                   onMouseLeave={(e) => { if (!isActive(item.href)) e.currentTarget.style.background = "transparent"; }}
                 >
-                  <span style={{ fontSize: "14px" }}>{item.icon}</span>
-                  {item.label}
+                  <span style={{ fontSize: "18px" }}>{item.icon}</span>
+                  {sidebarOpen && item.label}
                 </Link>
               )}
             </div>
@@ -217,39 +228,31 @@ export default function DashboardLayout({ children }) {
 
         {/* User info */}
         {user && (
-          <div style={{ padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,0.07)", background: "#243342", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
+          <div style={{ padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,0.07)", background: "#243342", flexShrink: 0, display: sidebarOpen ? "block" : "flex", justifyContent: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: sidebarOpen ? "flex-start" : "center", gap: "9px" }}>
               <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: roleBadge, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "700", fontSize: "13px", flexShrink: 0 }}>
                 {(user.fullName || user.email || "U")[0].toUpperCase()}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: "white", fontSize: "12px", fontWeight: "600", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {user.fullName || user.email}
-                </p>
-                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "11px", margin: 0 }}>{user.email}</p>
-              </div>
+              {sidebarOpen && (
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ color: "white", fontSize: "12px", fontWeight: "600", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {user.fullName || user.email}
+                  </p>
+                  <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "11px", margin: 0 }}>{user.email}</p>
+                </div>
+              )}
             </div>
           </div>
         )}
       </aside>
 
-      {/* Main */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#ecf0f1" }}>
-        <header style={{ background: "#2c3e50", height: "48px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 18px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.75)", fontSize: "18px", padding: "4px", lineHeight: 1 }}>☰</button>
-            <span style={{ color: "rgba(255,255,255,0.55)", fontSize: "13px" }}>
-              {pathname === "/dashboard" ? "Dashboard" : pathname.split("/").filter(Boolean).pop()?.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Link href="/" style={{ color: "rgba(255,255,255,0.65)", textDecoration: "none", fontSize: "12px", padding: "4px 12px", border: "1px solid rgba(255,255,255,0.18)", borderRadius: "3px" }}>Public Site</Link>
-            <button onClick={handleLogout} style={{ background: "#e74c3c", color: "white", border: "none", borderRadius: "3px", padding: "5px 14px", cursor: "pointer", fontSize: "12px", fontWeight: "600" }}>Logout</button>
-          </div>
-        </header>
+      {/* Main Content */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#ffffffff" }}>
         <main style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
           {children}
         </main>
+      </div>
+
       </div>
     </div>
   );

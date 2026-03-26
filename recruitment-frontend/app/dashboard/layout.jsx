@@ -9,7 +9,8 @@ import Image from "next/image";
 const SUPER_ADMIN_MENU = [
   { id: "dashboard", label: "Dashboard", icon: "⊞", href: "/dashboard" },
   { id: "users", label: "User Management", icon: "👥", href: "/dashboard/users" },
-  { id: "job-types", label: "Job Type Hierarchy", icon: "🗂", href: "/dashboard/job-types" },
+  { id: "org-structure", label: "Organization Structure", icon: "🏢", href: "/dashboard/org-structure" },
+  { id: "job-types", label: "Job Types", icon: "🗂", href: "/dashboard/job-types" },
   { id: "org-profile", label: "Organization Profile", icon: "🏛", href: "/dashboard/org-profile" },
 ];
 

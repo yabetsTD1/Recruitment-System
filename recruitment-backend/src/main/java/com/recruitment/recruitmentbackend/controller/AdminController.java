@@ -3,12 +3,14 @@ package com.recruitment.recruitmentbackend.controller;
 import com.recruitment.recruitmentbackend.dto.CreateUserRequest;
 import com.recruitment.recruitmentbackend.entity.JobQualification;
 import com.recruitment.recruitmentbackend.entity.JobType;
+import com.recruitment.recruitmentbackend.entity.OrgUnit;
 import com.recruitment.recruitmentbackend.entity.Role;
 import com.recruitment.recruitmentbackend.entity.User;
 import com.recruitment.recruitmentbackend.repository.ApplicationRepository;
 import com.recruitment.recruitmentbackend.repository.EmployeeRepository;
 import com.recruitment.recruitmentbackend.repository.JobQualificationRepository;
 import com.recruitment.recruitmentbackend.repository.JobTypeRepository;
+import com.recruitment.recruitmentbackend.repository.OrgUnitRepository;
 import com.recruitment.recruitmentbackend.repository.RecruitmentRepository;
 import com.recruitment.recruitmentbackend.repository.RoleRepository;
 import com.recruitment.recruitmentbackend.repository.UserRepository;
@@ -35,6 +37,7 @@ public class AdminController {
     private final EmployeeRepository employeeRepository;
     private final JobTypeRepository jobTypeRepository;
     private final JobQualificationRepository jobQualificationRepository;
+    private final OrgUnitRepository orgUnitRepository;
 
     // ── Users ──────────────────────────────────────────────────────────────────
 
@@ -116,8 +119,7 @@ public class AdminController {
     public ResponseEntity<?> getJobTypes() {
         List<?> result = jobTypeRepository.findAll().stream().map(jt -> Map.of(
                 "id", jt.getId(),
-                "name", jt.getName(),
-                "parentId", jt.getParentId() != null ? jt.getParentId() : ""
+                "name", jt.getName()
         )).toList();
         return ResponseEntity.ok(result);
     }
@@ -126,13 +128,10 @@ public class AdminController {
     public ResponseEntity<?> createJobType(@RequestBody Map<String, Object> body) {
         JobType jt = new JobType();
         jt.setName((String) body.get("name"));
-        Object pid = body.get("parentId");
-        jt.setParentId((pid != null && !pid.toString().isEmpty()) ? Integer.parseInt(pid.toString()) : null);
         JobType saved = jobTypeRepository.save(jt);
         return ResponseEntity.ok(Map.of(
                 "id", saved.getId(),
-                "name", saved.getName(),
-                "parentId", saved.getParentId() != null ? saved.getParentId() : ""
+                "name", saved.getName()
         ));
     }
 
@@ -140,13 +139,10 @@ public class AdminController {
     public ResponseEntity<?> updateJobType(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
         return jobTypeRepository.findById(id).map(jt -> {
             jt.setName((String) body.get("name"));
-            Object pid = body.get("parentId");
-            jt.setParentId((pid != null && !pid.toString().isEmpty()) ? Integer.parseInt(pid.toString()) : null);
             jobTypeRepository.save(jt);
             return ResponseEntity.ok(Map.of(
                     "id", jt.getId(),
-                    "name", jt.getName(),
-                    "parentId", jt.getParentId() != null ? jt.getParentId() : ""
+                    "name", jt.getName()
             ));
         }).orElse(ResponseEntity.notFound().build());
     }
@@ -154,7 +150,6 @@ public class AdminController {
     @DeleteMapping("/job-types/{id}")
     public ResponseEntity<?> deleteJobType(@PathVariable Integer id) {
         if (!jobTypeRepository.existsById(id)) return ResponseEntity.notFound().build();
-        // Cascade handled by DB foreign key ON DELETE CASCADE
         jobTypeRepository.deleteById(id);
         return ResponseEntity.ok(Map.of("message", "Deleted."));
     }
@@ -212,6 +207,65 @@ public class AdminController {
             employeeRepository.save(e);
             return ResponseEntity.ok(Map.of("status", e.getStatus().name()));
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    // ── Organization Structure ─────────────────────────────────────────────────
+
+    @GetMapping("/org-units")
+    public ResponseEntity<?> getOrgUnits() {
+        return ResponseEntity.ok(orgUnitRepository.findAll().stream().map(this::orgToMap).toList());
+    }
+
+    @PostMapping("/org-units")
+    public ResponseEntity<?> createOrgUnit(@RequestBody Map<String, Object> body) {
+        OrgUnit u = new OrgUnit();
+        u.setName(body.getOrDefault("name", "").toString());
+        u.setCode(body.getOrDefault("code", "").toString());
+        u.setDescription(body.getOrDefault("description", "").toString());
+        Object pid = body.get("parentId");
+        u.setParentId((pid != null && !pid.toString().isEmpty()) ? Integer.parseInt(pid.toString()) : null);
+        String type = body.getOrDefault("unitType", "DEPARTMENT").toString();
+        u.setUnitType(OrgUnit.UnitType.valueOf(type));
+        return ResponseEntity.ok(orgToMap(orgUnitRepository.save(u)));
+    }
+
+    @PutMapping("/org-units/{id}")
+    public ResponseEntity<?> updateOrgUnit(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
+        return orgUnitRepository.findById(id).map(u -> {
+            if (body.containsKey("name")) u.setName(body.get("name").toString());
+            if (body.containsKey("code")) u.setCode(body.get("code").toString());
+            if (body.containsKey("description")) u.setDescription(body.get("description").toString());
+            Object pid = body.get("parentId");
+            u.setParentId((pid != null && !pid.toString().isEmpty()) ? Integer.parseInt(pid.toString()) : null);
+            if (body.containsKey("unitType")) u.setUnitType(OrgUnit.UnitType.valueOf(body.get("unitType").toString()));
+            return ResponseEntity.ok(orgToMap(orgUnitRepository.save(u)));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/org-units/{id}")
+    public ResponseEntity<?> deleteOrgUnit(@PathVariable Integer id) {
+        if (!orgUnitRepository.existsById(id)) return ResponseEntity.notFound().build();
+        // re-parent children to deleted node's parent
+        orgUnitRepository.findById(id).ifPresent(u -> {
+            orgUnitRepository.findByParentId(id).forEach(child -> {
+                child.setParentId(u.getParentId());
+                orgUnitRepository.save(child);
+            });
+        });
+        orgUnitRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("message", "Deleted."));
+    }
+
+    private Map<String, Object> orgToMap(OrgUnit u) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", u.getId());
+        m.put("name", u.getName());
+        m.put("code", u.getCode() != null ? u.getCode() : "");
+        m.put("description", u.getDescription() != null ? u.getDescription() : "");
+        m.put("parentId", u.getParentId() != null ? u.getParentId() : null);
+        m.put("unitType", u.getUnitType() != null ? u.getUnitType().name() : "DEPARTMENT");
+        m.put("createdAt", u.getCreatedAt() != null ? u.getCreatedAt().toLocalDate().toString() : "");
+        return m;
     }
 
     // ── Job Qualifications ─────────────────────────────────────────────────────

@@ -10,13 +10,23 @@ const SUPER_ADMIN_MENU = [
   { id: "dashboard", label: "Dashboard", icon: "⊞", href: "/dashboard" },
   { id: "users", label: "User Management", icon: "👥", href: "/dashboard/users" },
   { id: "org-structure", label: "Organization Structure", icon: "🏢", href: "/dashboard/org-structure" },
-  { id: "job-types", label: "Job Types", icon: "🗂", href: "/dashboard/job-types" },
+  { id: "job-types", label: "Job Type Hierarchy", icon: "🗂", href: "/dashboard/job-types" },
   { id: "org-profile", label: "Organization Profile", icon: "🏛", href: "/dashboard/org-profile" },
 ];
 
 const ADMIN_MENU = [
   { id: "dashboard", label: "Dashboard", icon: "⊞", href: "/dashboard" },
-  { id: "job-qualification", label: "Job Qualification", icon: "🎓", href: "/dashboard/job-qualification" },
+  {
+    id: "org-profile", label: "Organization Profile", icon: "⊞",
+    children: [
+      { label: "Organization Structure", href: "/dashboard/org-structure" },
+      { label: "Salary Setting", href: "/dashboard/org-profile/salary-setting" },
+      { label: "Register Jobs", href: "/dashboard/org-profile/register-jobs" },
+      { label: "Register Job Qualification", href: "/dashboard/job-qualification" },
+      { label: "Jobs Under Family", href: "/dashboard/org-profile/jobs-under-family" },
+      { label: "Jobs Under Department", href: "/dashboard/org-profile/jobs-under-department" },
+    ],
+  },
   {
     id: "recruitment", label: "Recruitment", icon: "📋",
     children: [

@@ -21,7 +21,7 @@ function buildTree(nodes, parentId = null) {
     .map(n => ({ ...n, children: buildTree(nodes, n.id) }));
 }
 
-function TreeNode({ node, depth, onEdit, onDelete, onAddChild }) {
+function TreeNode({ node, depth, onEdit, onDelete, onAddChild, readonly }) {
   const [open, setOpen] = useState(true);
   const tc = TYPE_COLORS[node.unitType] || TYPE_COLORS.DEPARTMENT;
   const hasChildren = node.children?.length > 0;
@@ -47,29 +47,32 @@ function TreeNode({ node, depth, onEdit, onDelete, onAddChild }) {
         {/* Name + code */}
         <span style={{ fontWeight: "700", fontSize: "14px", color: "#1f2937", flex: 1 }}>{node.name}</span>
         {node.code && <span style={{ fontSize: "11px", color: "#9ca3af", fontFamily: "monospace" }}>[{node.code}]</span>}
+        {node.description && <span style={{ fontSize: "11px", color: "#b0b8c1", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{node.description}</span>}
 
-        {/* Actions */}
-        <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
-          <button onClick={() => onAddChild(node)} title="Add child unit"
-            style={{ padding: "3px 9px", background: "#e8f5e9", color: "#27ae60", border: "none", borderRadius: "5px", cursor: "pointer", fontSize: "11px", fontWeight: "700" }}>
-            + Child
-          </button>
-          <button onClick={() => onEdit(node)} title="Edit"
-            style={{ padding: "3px 9px", background: "#eaf0fb", color: "#2980b9", border: "none", borderRadius: "5px", cursor: "pointer", fontSize: "11px", fontWeight: "700" }}>
-            Edit
-          </button>
-          <button onClick={() => onDelete(node)} title="Delete"
-            style={{ padding: "3px 9px", background: "#fdecea", color: "#c0392b", border: "none", borderRadius: "5px", cursor: "pointer", fontSize: "11px", fontWeight: "700" }}>
-            ✕
-          </button>
-        </div>
+        {/* Actions — hidden for readonly */}
+        {!readonly && (
+          <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+            <button onClick={() => onAddChild(node)} title="Add child unit"
+              style={{ padding: "3px 9px", background: "#e8f5e9", color: "#27ae60", border: "none", borderRadius: "5px", cursor: "pointer", fontSize: "11px", fontWeight: "700" }}>
+              + Child
+            </button>
+            <button onClick={() => onEdit(node)} title="Edit"
+              style={{ padding: "3px 9px", background: "#eaf0fb", color: "#2980b9", border: "none", borderRadius: "5px", cursor: "pointer", fontSize: "11px", fontWeight: "700" }}>
+              Edit
+            </button>
+            <button onClick={() => onDelete(node)} title="Delete"
+              style={{ padding: "3px 9px", background: "#fdecea", color: "#c0392b", border: "none", borderRadius: "5px", cursor: "pointer", fontSize: "11px", fontWeight: "700" }}>
+              ✕
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Children */}
       {open && hasChildren && (
         <div style={{ borderLeft: "2px dashed #e5e7eb", marginLeft: "20px", paddingLeft: "4px" }}>
           {node.children.map(child => (
-            <TreeNode key={child.id} node={child} depth={depth + 1} onEdit={onEdit} onDelete={onDelete} onAddChild={onAddChild} />
+            <TreeNode key={child.id} node={child} depth={depth + 1} onEdit={onEdit} onDelete={onDelete} onAddChild={onAddChild} readonly={readonly} />
           ))}
         </div>
       )}
@@ -85,6 +88,14 @@ export default function OrgStructurePage() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [readonly, setReadonly] = useState(false);
+
+  useEffect(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      setReadonly(user.role === "ADMIN");
+    } catch {}
+  }, []);
 
   const fetchUnits = useCallback(async () => {
     setLoading(true);
@@ -173,12 +184,21 @@ export default function OrgStructurePage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
         <div>
           <h2 style={{ margin: "0 0 4px", fontSize: "22px", fontWeight: "700" }}>Organization Structure</h2>
-          <p style={{ margin: 0, color: "#7f8c8d", fontSize: "14px" }}>Define the hierarchical structure of INSA departments and units</p>
+          <p style={{ margin: 0, color: "#7f8c8d", fontSize: "14px" }}>
+            {readonly ? "View the hierarchical structure of INSA departments and units" : "Define the hierarchical structure of INSA departments and units"}
+          </p>
         </div>
-        <button onClick={() => openCreate()}
-          style={{ padding: "9px 20px", background: "#2980b9", color: "white", border: "none", borderRadius: "7px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
-          + Add Root Unit
-        </button>
+        {!readonly && (
+          <button onClick={() => openCreate()}
+            style={{ padding: "9px 20px", background: "#2980b9", color: "white", border: "none", borderRadius: "7px", cursor: "pointer", fontWeight: "700", fontSize: "13px" }}>
+            + Add Root Unit
+          </button>
+        )}
+        {readonly && (
+          <span style={{ fontSize: "12px", background: "#fef9e7", color: "#d68910", padding: "5px 12px", borderRadius: "20px", fontWeight: "600", border: "1px solid #f9e4b7" }}>
+            View Only
+          </span>
+        )}
       </div>
 
       {msg && (
@@ -211,13 +231,13 @@ export default function OrgStructurePage() {
           </div>
         ) : (
           tree.map(node => (
-            <TreeNode key={node.id} node={node} depth={0} onEdit={openEdit} onDelete={handleDelete} onAddChild={openCreate} />
+            <TreeNode key={node.id} node={node} depth={0} onEdit={openEdit} onDelete={handleDelete} onAddChild={openCreate} readonly={readonly} />
           ))
         )}
       </div>
 
-      {/* Form Modal */}
-      {showForm && (
+      {/* Form Modal — only for non-readonly */}
+      {showForm && !readonly && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}
           onClick={() => setShowForm(false)}>
           <div style={{ background: "white", borderRadius: "14px", width: "100%", maxWidth: "480px", boxShadow: "0 20px 60px rgba(0,0,0,0.25)" }}

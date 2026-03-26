@@ -21,6 +21,10 @@ public class JobQualification {
     @JoinColumn(name = "job_type_id", nullable = false)
     private JobType jobType;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "registered_job_id")
+    private RegisteredJob registeredJob;
+
     @Column(name = "job_title", nullable = false, length = 200)
     private String jobTitle;
 

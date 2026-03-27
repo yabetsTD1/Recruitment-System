@@ -264,7 +264,7 @@ function JobQualificationContent() {
                   <td style={{ padding: "12px 16px" }}><span style={statusBadge(jq.status)}>{jq.status}</span></td>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ display: "flex", gap: "6px" }}>
-                      <button onClick={() => selectJq(jq)} style={{ padding: "5px 12px", background: "#e8f5e9", color: "#27ae60", border: "none", borderRadius: "5px", cursor: "pointer", fontWeight: "600", fontSize: "12px" }}>View</button>
+                      <button onClick={() => selectJq(jq)} style={{ padding: "5px 12px", background: "#e8f5e9", color: "#27ae60", border: "none", borderRadius: "5px", cursor: "pointer", fontWeight: "600", fontSize: "12px" }}>Add Qualification</button>
                       <button onClick={() => openEditJq(jq)} style={{ padding: "5px 12px", background: "#eaf4fb", color: "#2980b9", border: "none", borderRadius: "5px", cursor: "pointer", fontWeight: "600", fontSize: "12px" }}>Edit</button>
                       <button onClick={() => deleteJq(jq)} style={{ padding: "5px 12px", background: "#fee2e2", color: "#b91c1c", border: "none", borderRadius: "5px", cursor: "pointer", fontWeight: "600", fontSize: "12px" }}>Delete</button>
                     </div>
@@ -293,7 +293,7 @@ function JobQualificationContent() {
                   { label: "Job Title", value: selected.jobTitle },
                   { label: "Job Family", value: selected.jobTypeName || "—" },
                   { label: "Grade / Class", value: selected.grade || "—" },
-                  { label: "Competency Framework", value: selected.competencyFramework || "—" },
+                  { label: "INSA Competency Framework (ICF)", value: selected.icf || selected.competencyFramework || "—" },
                 ].map(f => (
                   <div key={f.label}>
                     <p style={{ fontSize: "11px", fontWeight: "700", color: "#9ca3af", margin: "0 0 3px", textTransform: "uppercase" }}>{f.label}</p>
@@ -378,18 +378,12 @@ function JobQualificationContent() {
                   </div>
                 </div>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>Competency Framework</label>
-                  <input value={jqForm.competencyFramework} onChange={e => setJ("competencyFramework", e.target.value)} placeholder="e.g. Leadership" style={inp} />
-                </div>
-                <div>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>ICF</label>
-                  <select value={jqForm.icf} onChange={e => setJ("icf", e.target.value)} style={inp}>
-                    <option value="">-- Select --</option>
-                    {ICF_OPTIONS.map(i => <option key={i} value={i}>{i}</option>)}
-                  </select>
-                </div>
+              <div style={{ marginBottom: "14px" }}>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>INSA Competency Framework (ICF)</label>
+                <select value={jqForm.icf} onChange={e => setJ("icf", e.target.value)} style={inp}>
+                  <option value="">-- Select --</option>
+                  {ICF_OPTIONS.map(i => <option key={i} value={i}>{i}</option>)}
+                </select>
               </div>
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>Status</label>

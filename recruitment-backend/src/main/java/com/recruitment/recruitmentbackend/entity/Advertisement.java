@@ -8,10 +8,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "recruitment_criteria")
+@Table(name = "advertisements")
 @Data
 @NoArgsConstructor
-public class RecruitmentCriteria {
+public class Advertisement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,26 +21,16 @@ public class RecruitmentCriteria {
     @JoinColumn(name = "recruitment_id", nullable = false)
     private Recruitment recruitment;
 
-    @Column(name = "criteria_name", nullable = false, length = 200)
-    private String criteriaName;
+    @Column(name = "media_type", length = 100)
+    private String mediaType;   // e.g. Facebook, Newspaper, TV, Radio, Website
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "criteria_type")
-    private CriteriaType criteriaType;
+    @Column(name = "media_name", length = 200)
+    private String mediaName;
 
-    @Column(name = "is_required")
-    private Boolean isRequired = true;
-
-    @Column(name = "weight")
-    private Double weight;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
-    private User createdBy;
+    @Column(name = "occurrence")
+    private Integer occurrence = 0;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-
-    public enum CriteriaType { TEXT, NUMBER, DATE, BOOLEAN, SELECT, EXAM }
 }

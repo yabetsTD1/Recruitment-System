@@ -446,6 +446,7 @@ public class AdminController {
             jq.setMinExperience(body.getOrDefault("minExperience", "").toString());
             jq.setRequiredSkills(body.getOrDefault("requiredSkills", "").toString());
             jq.setGrade(body.getOrDefault("grade", "").toString());
+            jq.setIcf(body.getOrDefault("icf", "").toString());
             jq.setCompetencyFramework(body.getOrDefault("competencyFramework", "").toString());
             jq.setFullDescription(body.getOrDefault("fullDescription", "").toString());
             String status = body.getOrDefault("status", "DRAFT").toString();
@@ -470,6 +471,7 @@ public class AdminController {
             if (body.containsKey("minExperience")) jq.setMinExperience(body.get("minExperience").toString());
             if (body.containsKey("requiredSkills")) jq.setRequiredSkills(body.get("requiredSkills").toString());
             if (body.containsKey("grade")) jq.setGrade(body.get("grade").toString());
+            if (body.containsKey("icf")) jq.setIcf(body.get("icf").toString());
             if (body.containsKey("competencyFramework")) jq.setCompetencyFramework(body.get("competencyFramework").toString());
             if (body.containsKey("fullDescription")) jq.setFullDescription(body.get("fullDescription").toString());
             if (body.containsKey("status")) jq.setStatus(JobQualification.QualificationStatus.valueOf(body.get("status").toString()));
@@ -554,6 +556,7 @@ public class AdminController {
         m.put("minExperience", jq.getMinExperience() != null ? jq.getMinExperience() : "");
         m.put("requiredSkills", jq.getRequiredSkills() != null ? jq.getRequiredSkills() : "");
         m.put("grade", jq.getGrade() != null ? jq.getGrade() : "");
+        m.put("icf", jq.getIcf() != null ? jq.getIcf() : "");
         m.put("competencyFramework", jq.getCompetencyFramework() != null ? jq.getCompetencyFramework() : "");
         m.put("fullDescription", jq.getFullDescription() != null ? jq.getFullDescription() : "");
         m.put("status", jq.getStatus().name());

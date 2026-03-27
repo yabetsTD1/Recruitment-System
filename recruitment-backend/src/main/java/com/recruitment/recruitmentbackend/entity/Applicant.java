@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -45,6 +46,27 @@ public class Applicant {
 
     @Column(name = "linkedin_url", length = 255)
     private String linkedinUrl;
+
+    @Column(name = "gpa", precision = 3, scale = 2)
+    private BigDecimal gpa;
+
+    @Column(name = "experience_years")
+    private Integer experienceYears;
+
+    @Column(name = "graduated_from", length = 200)
+    private String graduatedFrom;
+
+    @Column(name = "nation", length = 100)
+    private String nation;
+
+    @Column(name = "physical_disability", length = 200)
+    private String physicalDisability;
+
+    @Column(name = "relevant_skills", columnDefinition = "TEXT")
+    private String relevantSkills;
+
+    @Column(name = "other_info", columnDefinition = "TEXT")
+    private String otherInfo;
 
     @Column(name = "password", length = 255)
     private String password;

@@ -40,6 +40,9 @@ public class JobQualification {
     @Column(name = "grade", length = 50)
     private String grade;
 
+    @Column(name = "icf", length = 20)
+    private String icf;
+
     @Column(name = "competency_framework", columnDefinition = "TEXT")
     private String competencyFramework;
 

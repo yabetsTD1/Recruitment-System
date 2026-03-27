@@ -55,6 +55,30 @@ public class Recruitment {
     @Column(name = "vacancy_type", length = 50)
     private String vacancyType; // "Inside" or "Outside"
 
+    @Column(name = "icf", length = 20)
+    private String icf;
+
+    @Column(name = "increment_step", length = 20)
+    private String incrementStep;
+
+    @Column(name = "employment_type", length = 50)
+    private String employmentType;
+
+    @Column(name = "budget_year", length = 10)
+    private String budgetYear;
+
+    @Column(name = "recruitment_type", length = 100)
+    private String recruitmentType;
+
+    @Column(name = "position_name", length = 200)
+    private String positionName;
+
+    @Column(name = "class_code", length = 20)
+    private String classCode;
+
+    @Column(name = "pass_mark")
+    private Double passMark = 60.0;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "job_qualification_id")
     private JobQualification jobQualification;

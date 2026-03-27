@@ -13,8 +13,21 @@ export default function RecruitmentPostPage() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ postingDate: today(), closingDate: "", remark: "" });
+  const [form, setForm] = useState({ postingDate: today(), closingDate: "", passingDays: "", remark: "" });
   const [saving, setSaving] = useState(false);
+
+  // Add N working days (Mon-Fri) to a date string, return yyyy-MM-dd
+  const addWorkingDays = (startDateStr, days) => {
+    if (!startDateStr || !days || days <= 0) return "";
+    const d = new Date(startDateStr);
+    let count = 0;
+    while (count < days) {
+      d.setDate(d.getDate() + 1);
+      const dow = d.getDay(); // 0=Sun, 6=Sat
+      if (dow !== 0 && dow !== 6) count++;
+    }
+    return d.toISOString().split("T")[0];
+  };
 
   const loadData = async () => {
     try {
@@ -41,7 +54,7 @@ export default function RecruitmentPostPage() {
 
   const handleSelect = (row) => {
     setSelected(row);
-    setForm({ postingDate: today(), closingDate: row.closingDate || "", remark: "" });
+    setForm({ postingDate: today(), closingDate: row.closingDate || "", passingDays: "", remark: "" });
   };
 
   const handlePost = async () => {
@@ -175,15 +188,34 @@ export default function RecruitmentPostPage() {
               </div>
 
               {/* Posting dates */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "12px" }}>
                 <div>
                   <label style={labelStyle}>Posting Date *</label>
-                  <input type="date" value={form.postingDate} onChange={e => setForm({ ...form, postingDate: e.target.value })}
+                  <input type="date" value={form.postingDate}
+                    onChange={e => {
+                      const pd = e.target.value;
+                      const cd = form.passingDays ? addWorkingDays(pd, Number(form.passingDays)) : form.closingDate;
+                      setForm(f => ({ ...f, postingDate: pd, closingDate: cd }));
+                    }}
                     style={inputStyle} />
                 </div>
                 <div>
+                  <label style={labelStyle}>Passing Days (working days)</label>
+                  <input
+                    type="number" min="1" placeholder="e.g. 5"
+                    value={form.passingDays}
+                    onChange={e => {
+                      const days = e.target.value;
+                      const cd = days ? addWorkingDays(form.postingDate, Number(days)) : "";
+                      setForm(f => ({ ...f, passingDays: days, closingDate: cd }));
+                    }}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
                   <label style={labelStyle}>Closing Date *</label>
-                  <input type="date" value={form.closingDate} onChange={e => setForm({ ...form, closingDate: e.target.value })}
+                  <input type="date" value={form.closingDate}
+                    onChange={e => setForm(f => ({ ...f, closingDate: e.target.value, passingDays: "" }))}
                     min={form.postingDate} style={inputStyle} />
                 </div>
               </div>

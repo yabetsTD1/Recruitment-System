@@ -47,6 +47,17 @@ CREATE TABLE IF NOT EXISTS applicants (
     email VARCHAR(150),
     phone VARCHAR(30),
     password VARCHAR(255),
+    location VARCHAR(200),
+    gender VARCHAR(20),
+    github_url VARCHAR(255),
+    linkedin_url VARCHAR(255),
+    gpa DECIMAL(3,2),
+    experience_years INT,
+    graduated_from VARCHAR(200),
+    nation VARCHAR(100),
+    physical_disability VARCHAR(200),
+    relevant_skills TEXT,
+    other_info TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (employee_id) REFERENCES employees(id)
 );
@@ -68,8 +79,9 @@ CREATE TABLE IF NOT EXISTS recruitment_criteria (
     id INT AUTO_INCREMENT PRIMARY KEY,
     recruitment_id INT NOT NULL,
     criteria_name VARCHAR(200) NOT NULL,
-    criteria_type ENUM('TEXT','NUMBER','DATE','BOOLEAN','SELECT'),
+    criteria_type ENUM('TEXT','NUMBER','DATE','BOOLEAN','SELECT','EXAM'),
     is_required BOOLEAN DEFAULT TRUE,
+    weight DOUBLE,
     created_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (recruitment_id) REFERENCES recruitments(id) ON DELETE CASCADE,
@@ -157,3 +169,29 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS advertisements (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recruitment_id INT NOT NULL,
+    media_type VARCHAR(100),
+    media_name VARCHAR(200),
+    occurrence INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (recruitment_id) REFERENCES recruitments(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS exam_results (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    application_id INT NOT NULL,
+    criteria_id INT NOT NULL,
+    result_score DOUBLE,
+    status ENUM('PASS','FAIL'),
+    recorded_by INT,
+    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+    FOREIGN KEY (criteria_id) REFERENCES recruitment_criteria(id) ON DELETE CASCADE,
+    FOREIGN KEY (recorded_by) REFERENCES users(id)
+);
+
+-- Run this if the recruitments table already exists without pass_mark:
+-- ALTER TABLE recruitments ADD COLUMN IF NOT EXISTS pass_mark DOUBLE DEFAULT 60.0;

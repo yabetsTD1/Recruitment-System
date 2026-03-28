@@ -23,10 +23,8 @@ public class DataInitializer implements CommandLineRunner {
         Role adminRole = seedRole("ADMIN");
         seedRole("EMPLOYEE");
 
-        // Delete and recreate admin user to ensure correct password
-        userRepository.findByEmail("admin@insa.gov.et").ifPresent(userRepository::delete);
-        
-        User user = new User();
+        // Seed or update super admin user
+        User user = userRepository.findByEmail("admin@insa.gov.et").orElse(new User());
         user.setFullName("Super Admin");
         user.setUsername("superadmin");
         user.setEmail("admin@insa.gov.et");
@@ -36,10 +34,8 @@ public class DataInitializer implements CommandLineRunner {
         userRepository.save(user);
         System.out.println("✅ Super admin seeded: admin@insa.gov.et / admin123");
 
-        // Create default recruiter/admin user
-        userRepository.findByEmail("tolman@gmail.com").ifPresent(userRepository::delete);
-        
-        User recruiter = new User();
+        // Seed or update default recruiter/admin user
+        User recruiter = userRepository.findByEmail("tolman@gmail.com").orElse(new User());
         recruiter.setFullName("HR Recruiter");
         recruiter.setUsername("recruiter");
         recruiter.setEmail("tolman@gmail.com");

@@ -62,12 +62,29 @@ export default function RecruitmentPostPage() {
     if (!form.closingDate) { alert("Please set a closing date."); return; }
     setSaving(true);
     try {
-      const postType = selected.vacancyType === "Outside" ? "EXTERNAL" : "INTERNAL";
-      await api.post(`/recruitments/${selected.id}/post`, {
-        postType,
-        closingDate: form.closingDate,
-        remark: form.remark,
-      });
+      const postType = selected.vacancyType === "Outside" ? "EXTERNAL"
+        : selected.vacancyType === "Both" ? "BOTH"
+        : "INTERNAL";
+
+      if (postType === "BOTH") {
+        // Create both INTERNAL and EXTERNAL posts
+        await api.post(`/recruitments/${selected.id}/post`, {
+          postType: "INTERNAL",
+          closingDate: form.closingDate,
+          remark: form.remark,
+        });
+        await api.post(`/recruitments/${selected.id}/post`, {
+          postType: "EXTERNAL",
+          closingDate: form.closingDate,
+          remark: form.remark,
+        });
+      } else {
+        await api.post(`/recruitments/${selected.id}/post`, {
+          postType,
+          closingDate: form.closingDate,
+          remark: form.remark,
+        });
+      }
       await loadData();
       setSelected(null);
     } catch (e) {
@@ -231,11 +248,13 @@ export default function RecruitmentPostPage() {
               {/* Visibility note */}
               <div style={{
                 padding: "10px 14px", borderRadius: "5px", marginBottom: "16px", fontSize: "12px", fontWeight: "600",
-                background: selected.vacancyType === "Outside" ? "#dbeafe" : "#d1fae5",
-                color: selected.vacancyType === "Outside" ? "#1d4ed8" : "#065f46",
+                background: selected.vacancyType === "Outside" ? "#dbeafe" : selected.vacancyType === "Both" ? "#fef3c7" : "#d1fae5",
+                color: selected.vacancyType === "Outside" ? "#1d4ed8" : selected.vacancyType === "Both" ? "#92400e" : "#065f46",
               }}>
                 {selected.vacancyType === "Outside"
                   ? "🌐 Will be visible on the public jobs page (external applicants)"
+                  : selected.vacancyType === "Both"
+                  ? "🌐🏢 Will be visible to both external applicants and INSA employees"
                   : "🏢 Will be visible to INSA employees only (internal)"}
               </div>
 

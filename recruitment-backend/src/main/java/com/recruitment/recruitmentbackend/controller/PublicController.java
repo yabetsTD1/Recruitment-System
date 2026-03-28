@@ -37,7 +37,7 @@ public class PublicController {
         Integer recruitmentId;
     }
 
-    // Public job listings — EXTERNAL only (posted + vacancyType = Outside)
+    // Public job listings — EXTERNAL posts (including Both)
     @GetMapping("/jobs")
     public ResponseEntity<?> getJobs() {
         LocalDate now = LocalDate.now();

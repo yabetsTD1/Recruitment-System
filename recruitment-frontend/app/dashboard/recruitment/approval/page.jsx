@@ -73,7 +73,9 @@ export default function RecruitmentApprovalPage() {
         : `/recruitments/${selected.id}/reject`;
       await api.post(endpoint, {
         comment: form.comment,
-        vacancyType: form.vacancyType,
+        vacancyType: form.advertisementType === "External" ? "Outside"
+          : form.advertisementType === "Both" ? "Both"
+          : "Inside",
         advertisementType: form.advertisementType,
       });
       setMsg({ type: "success", text: `Request ${form.decision.toLowerCase()} successfully.` });

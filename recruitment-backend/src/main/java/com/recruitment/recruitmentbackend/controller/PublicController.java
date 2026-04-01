@@ -23,6 +23,7 @@ public class PublicController {
     private final ApplicationRepository applicationRepository;
     private final ApplicantRepository applicantRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JobQualificationEntryRepository qualificationEntryRepository;
 
     @Data
     static class ApplyRequest {
@@ -57,7 +58,11 @@ public class PublicController {
                     m.put("jobLocation", r.getJobLocation() != null ? r.getJobLocation() : "");
                     m.put("hiringType", r.getHiringType() != null ? r.getHiringType() : "");
                     m.put("closingDate", p.getClosingDate() != null ? p.getClosingDate().toString() : "");
+                    m.put("deadline", p.getClosingDate() != null ? p.getClosingDate().toString() : "");
                     m.put("batchCode", r.getBatchCode() != null ? r.getBatchCode() : "");
+                    m.put("recruitmentType", r.getRecruitmentType() != null ? r.getRecruitmentType() : "");
+                    m.put("positionName", r.getPositionName() != null ? r.getPositionName() : "");
+                    m.put("employmentType", r.getEmploymentType() != null ? r.getEmploymentType() : "");
                     return m;
                 }).toList();
         return ResponseEntity.ok(jobs);
@@ -84,7 +89,39 @@ public class PublicController {
                     m.put("hiringType", r.getHiringType() != null ? r.getHiringType() : "");
                     m.put("batchCode", r.getBatchCode() != null ? r.getBatchCode() : "");
                     m.put("closingDate", p.getClosingDate() != null ? p.getClosingDate().toString() : "");
+                    m.put("deadline", p.getClosingDate() != null ? p.getClosingDate().toString() : "");
+                    m.put("recruitmentType", r.getRecruitmentType() != null ? r.getRecruitmentType() : "");
+                    m.put("positionName", r.getPositionName() != null ? r.getPositionName() : "");
+                    m.put("employmentType", r.getEmploymentType() != null ? r.getEmploymentType() : "");
+                    m.put("competencyFramework", r.getCompetencyFramework() != null ? r.getCompetencyFramework() : "");
                     m.put("status", r.getStatus().name());
+                    
+                    // Add job qualification details if available
+                    if (r.getJobQualification() != null) {
+                        JobQualification jq = r.getJobQualification();
+                        m.put("minDegree", jq.getMinDegree() != null ? jq.getMinDegree() : "");
+                        m.put("minExperience", jq.getMinExperience() != null ? jq.getMinExperience() : "");
+                        m.put("requiredSkills", jq.getRequiredSkills() != null ? jq.getRequiredSkills() : "");
+                        m.put("competency", jq.getCompetencyFramework() != null ? jq.getCompetencyFramework() : "");
+                        m.put("fullDescription", jq.getFullDescription() != null ? jq.getFullDescription() : "");
+                        
+                        // Fetch qualification entries
+                        List<JobQualificationEntry> entries = qualificationEntryRepository.findByJobQualificationId(jq.getId());
+                        List<Map<String, Object>> entriesList = entries.stream().map(entry -> {
+                            Map<String, Object> entryMap = new HashMap<>();
+                            entryMap.put("id", entry.getId());
+                            entryMap.put("educationCategory", entry.getEducationCategory() != null ? entry.getEducationCategory() : "");
+                            entryMap.put("educationLevel", entry.getEducationLevel() != null ? entry.getEducationLevel() : "");
+                            entryMap.put("fieldOfStudy", entry.getFieldOfStudy() != null ? entry.getFieldOfStudy() : "");
+                            entryMap.put("minExperience", entry.getMinExperience() != null ? entry.getMinExperience() : "");
+                            entryMap.put("skill", entry.getSkill() != null ? entry.getSkill() : "");
+                            entryMap.put("knowledge", entry.getKnowledge() != null ? entry.getKnowledge() : "");
+                            entryMap.put("competency", entry.getCompetency() != null ? entry.getCompetency() : "");
+                            return entryMap;
+                        }).toList();
+                        m.put("qualificationEntries", entriesList);
+                    }
+                    
                     return ResponseEntity.ok((Object) m);
                 })
                 .orElseGet(() -> ResponseEntity.notFound().build());

@@ -46,7 +46,7 @@ export default function PublicJobsPage() {
       </div>
 
       {/* Jobs */}
-      <div style={{ maxWidth: "960px", margin: "0 auto", padding: "32px 20px" }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 20px" }}>
         {loading ? (
           <p style={{ textAlign: "center", color: "#7f8c8d", padding: "40px" }}>Loading jobs...</p>
         ) : filtered.length === 0 ? (
@@ -55,33 +55,108 @@ export default function PublicJobsPage() {
             <p style={{ fontSize: "16px" }}>No open positions at the moment.</p>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "24px" }}>
             {filtered.map(job => (
-              <div key={job.id} style={{ background: "white", borderRadius: "8px", padding: "24px", boxShadow: "0 1px 4px rgba(0,0,0,0.08)", border: "1px solid #ecf0f1" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
-                      <h2 style={{ fontSize: "18px", fontWeight: "700", color: "#2c3e50", margin: 0 }}>{job.jobTitle}</h2>
-                      <span style={{ padding: "2px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "700", background: "#d1fae5", color: "#065f46" }}>Open</span>
-                    </div>
-                    <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "10px" }}>
-                      {job.department && <span style={{ fontSize: "13px", color: "#7f8c8d" }}>🏢 {job.department}</span>}
-                      {job.jobLocation && <span style={{ fontSize: "13px", color: "#7f8c8d" }}>📍 {job.jobLocation}</span>}
-                      {job.salary && <span style={{ fontSize: "13px", color: "#7f8c8d" }}>💰 {job.salary}</span>}
-                      {job.hiringType && <span style={{ fontSize: "13px", color: "#7f8c8d" }}>📄 {job.hiringType}</span>}
-                      <span style={{ fontSize: "13px", color: "#7f8c8d" }}>👥 {job.vacancyNumber} position(s)</span>
-                    </div>
-                    {job.closingDate && (
-                      <p style={{ fontSize: "12px", color: "#e67e22", fontWeight: "600", margin: 0 }}>
-                        Deadline: {job.closingDate}
-                      </p>
-                    )}
+              <div key={job.id} style={{ 
+                background: "white", 
+                borderRadius: "10px", 
+                padding: "24px", 
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)", 
+                border: "1px solid #e8ecef",
+                display: "flex",
+                flexDirection: "column",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+              }}>
+                {/* Header */}
+                <div style={{ marginBottom: "16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                    <h2 style={{ fontSize: "19px", fontWeight: "700", color: "#2c3e50", margin: 0, flex: 1 }}>{job.jobTitle}</h2>
+                    <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "10px", fontWeight: "700", background: "#d1fae5", color: "#065f46" }}>OPEN</span>
                   </div>
-                  <Link href={`/apply?id=${job.id}`}
-                    style={{ padding: "10px 24px", background: "#2980b9", color: "white", borderRadius: "5px", textDecoration: "none", fontWeight: "600", fontSize: "13px", whiteSpace: "nowrap" }}>
-                    Apply Now
-                  </Link>
+                  {job.department && (
+                    <p style={{ fontSize: "13px", color: "#7f8c8d", margin: "0 0 4px 0" }}>🏢 {job.department}</p>
+                  )}
                 </div>
+
+                {/* Details Grid */}
+                <div style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: "1fr 1fr", 
+                  gap: "12px", 
+                  marginBottom: "16px",
+                  padding: "16px",
+                  background: "#f8f9fa",
+                  borderRadius: "6px"
+                }}>
+                  {job.batchCode && (
+                    <div>
+                      <p style={{ fontSize: "11px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>BATCH CODE</p>
+                      <p style={{ fontSize: "13px", color: "#2c3e50", margin: 0, fontWeight: "600" }}>{job.batchCode}</p>
+                    </div>
+                  )}
+                  {job.recruitmentType && (
+                    <div>
+                      <p style={{ fontSize: "11px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>TYPE</p>
+                      <p style={{ fontSize: "13px", color: "#2c3e50", margin: 0, fontWeight: "600" }}>{job.recruitmentType}</p>
+                    </div>
+                  )}
+                  {job.salary && (
+                    <div>
+                      <p style={{ fontSize: "11px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>SALARY</p>
+                      <p style={{ fontSize: "13px", color: "#27ae60", margin: 0, fontWeight: "600" }}>{job.salary}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p style={{ fontSize: "11px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>VACANCIES</p>
+                    <p style={{ fontSize: "13px", color: "#2c3e50", margin: 0, fontWeight: "600" }}>{job.vacancyNumber || 0} Position{job.vacancyNumber !== 1 ? "s" : ""}</p>
+                  </div>
+                  {job.deadline && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <p style={{ fontSize: "11px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>DEADLINE</p>
+                      <p style={{ fontSize: "13px", color: "#e67e22", margin: 0, fontWeight: "700" }}>{job.deadline}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Additional Info */}
+                <div style={{ marginBottom: "16px", flex: 1 }}>
+                  {job.jobLocation && (
+                    <p style={{ fontSize: "12px", color: "#7f8c8d", margin: "0 0 6px 0" }}>📍 {job.jobLocation}</p>
+                  )}
+                  {job.employmentType && (
+                    <p style={{ fontSize: "12px", color: "#7f8c8d", margin: "0 0 6px 0" }}>📄 {job.employmentType}</p>
+                  )}
+                  {job.hiringType && (
+                    <p style={{ fontSize: "12px", color: "#7f8c8d", margin: 0 }}>🔖 {job.hiringType}</p>
+                  )}
+                </div>
+
+                {/* View Details Button */}
+                <Link href={`/jobs/${job.id}`}
+                  style={{ 
+                    padding: "12px 24px", 
+                    background: "#2980b9", 
+                    color: "white", 
+                    borderRadius: "6px", 
+                    textDecoration: "none", 
+                    fontWeight: "600", 
+                    fontSize: "14px", 
+                    textAlign: "center",
+                    display: "block",
+                    transition: "background 0.2s"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "#3498db"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "#2980b9"}>
+                  View Details →
+                </Link>
               </div>
             ))}
           </div>

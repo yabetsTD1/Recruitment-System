@@ -143,60 +143,120 @@ export default function Home() {
           />
         </div>
 
-        <div style={{ background: "white", borderRadius: "6px", boxShadow: "0 1px 4px rgba(0,0,0,0.08)", overflow: "hidden" }}>
-          {loading ? (
-            <div style={{ padding: "48px", textAlign: "center", color: "#95a5a6", fontSize: "14px" }}>Loading jobs...</div>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#f0f3f4" }}>
-                  {["Job Title", "Department", "Location", "Deadline", "Action"].map((h) => (
-                    <th key={h} style={{ padding: "11px 18px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#5d6d7e", borderBottom: "1px solid #dce1e7" }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((job) => (
-                  <tr key={job.id} style={{ borderBottom: "1px solid #f0f3f4" }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8f9fa")}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "white")}
-                  >
-                    <td style={{ padding: "12px 18px", fontWeight: "600", color: "#2c3e50", fontSize: "14px" }}>
-                      {job.jobTitle}
-                      {job.vacancyNumber > 0 && (
-                        <span style={{ marginLeft: "8px", fontSize: "11px", color: "#7f8c8d", fontWeight: "400" }}>
-                          ({job.vacancyNumber} opening{job.vacancyNumber !== 1 ? "s" : ""})
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ padding: "12px 18px", color: "#5d6d7e", fontSize: "13px" }}>{job.department || "—"}</td>
-                    <td style={{ padding: "12px 18px", color: "#5d6d7e", fontSize: "13px" }}>{job.jobLocation || "—"}</td>
-                    <td style={{ padding: "12px 18px", color: job.closingDate ? "#e67e22" : "#5d6d7e", fontSize: "13px", fontWeight: job.closingDate ? "600" : "400" }}>
-                      {job.closingDate || "Open"}
-                    </td>
-                    <td style={{ padding: "12px 18px" }}>
-                      <Link href={`/apply?id=${job.id}`} style={{ background: "#2980b9", color: "white", textDecoration: "none", padding: "6px 16px", borderRadius: "4px", fontSize: "12px", fontWeight: "600" }}
-                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#3498db")}
-                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#2980b9")}
-                      >
-                        Apply Now
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={5} style={{ padding: "48px", textAlign: "center", color: "#95a5a6", fontSize: "14px" }}>
-                      {jobs.length === 0 ? "No open positions at the moment." : "No jobs match your search."}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
+        {loading ? (
+          <div style={{ padding: "48px", textAlign: "center", color: "#95a5a6", fontSize: "14px" }}>Loading jobs...</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px", color: "#7f8c8d", background: "white", borderRadius: "10px" }}>
+            <div style={{ fontSize: "48px", marginBottom: "12px" }}>📋</div>
+            <p style={{ fontSize: "16px" }}>{jobs.length === 0 ? "No open positions at the moment." : "No jobs match your search."}</p>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "24px" }}>
+            {filtered.map((job) => (
+              <div key={job.id} style={{ 
+                background: "white", 
+                borderRadius: "10px", 
+                padding: "24px", 
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)", 
+                border: "1px solid #e8ecef",
+                display: "flex",
+                flexDirection: "column",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = "translateY(-4px)";
+                (e.currentTarget as HTMLElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.15)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)";
+              }}>
+                {/* Header */}
+                <div style={{ marginBottom: "16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                    <h3 style={{ fontSize: "19px", fontWeight: "700", color: "#2c3e50", margin: 0, flex: 1 }}>{job.jobTitle}</h3>
+                    <span style={{ padding: "3px 10px", borderRadius: "20px", fontSize: "10px", fontWeight: "700", background: "#d1fae5", color: "#065f46" }}>OPEN</span>
+                  </div>
+                  {job.department && (
+                    <p style={{ fontSize: "13px", color: "#7f8c8d", margin: "0 0 4px 0" }}>🏢 {job.department}</p>
+                  )}
+                </div>
+
+                {/* Details Grid */}
+                <div style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: "1fr 1fr", 
+                  gap: "12px", 
+                  marginBottom: "16px",
+                  padding: "16px",
+                  background: "#f8f9fa",
+                  borderRadius: "6px"
+                }}>
+                  {job.batchCode && (
+                    <div>
+                      <p style={{ fontSize: "11px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>BATCH CODE</p>
+                      <p style={{ fontSize: "13px", color: "#2c3e50", margin: 0, fontWeight: "600" }}>{job.batchCode}</p>
+                    </div>
+                  )}
+                  {job.recruitmentType && (
+                    <div>
+                      <p style={{ fontSize: "11px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>TYPE</p>
+                      <p style={{ fontSize: "13px", color: "#2c3e50", margin: 0, fontWeight: "600" }}>{job.recruitmentType}</p>
+                    </div>
+                  )}
+                  {job.salary && (
+                    <div>
+                      <p style={{ fontSize: "11px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>SALARY</p>
+                      <p style={{ fontSize: "13px", color: "#27ae60", margin: 0, fontWeight: "600" }}>{job.salary}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p style={{ fontSize: "11px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>VACANCIES</p>
+                    <p style={{ fontSize: "13px", color: "#2c3e50", margin: 0, fontWeight: "600" }}>{job.vacancyNumber || 0} Position{job.vacancyNumber !== 1 ? "s" : ""}</p>
+                  </div>
+                  {(job.deadline || job.closingDate) && (
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <p style={{ fontSize: "11px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>DEADLINE</p>
+                      <p style={{ fontSize: "13px", color: "#e67e22", margin: 0, fontWeight: "700" }}>{job.deadline || job.closingDate}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Additional Info */}
+                <div style={{ marginBottom: "16px", flex: 1 }}>
+                  {job.jobLocation && (
+                    <p style={{ fontSize: "12px", color: "#7f8c8d", margin: "0 0 6px 0" }}>📍 {job.jobLocation}</p>
+                  )}
+                  {job.employmentType && (
+                    <p style={{ fontSize: "12px", color: "#7f8c8d", margin: "0 0 6px 0" }}>📄 {job.employmentType}</p>
+                  )}
+                  {job.hiringType && (
+                    <p style={{ fontSize: "12px", color: "#7f8c8d", margin: 0 }}>🔖 {job.hiringType}</p>
+                  )}
+                </div>
+
+                {/* View Details Button */}
+                <Link href={`/jobs/${job.id}`}
+                  style={{ 
+                    padding: "12px 24px", 
+                    background: "#2980b9", 
+                    color: "white", 
+                    borderRadius: "6px", 
+                    textDecoration: "none", 
+                    fontWeight: "600", 
+                    fontSize: "14px", 
+                    textAlign: "center",
+                    display: "block",
+                    transition: "background 0.2s"
+                  }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#3498db")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#2980b9")}>
+                  View Details →
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Footer */}

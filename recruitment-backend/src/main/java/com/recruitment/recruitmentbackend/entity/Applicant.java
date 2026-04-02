@@ -1,12 +1,23 @@
 package com.recruitment.recruitmentbackend.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "applicants")
@@ -28,6 +39,15 @@ public class Applicant {
 
     @Column(name = "full_name", length = 150)
     private String fullName;
+
+    @Column(name = "first_name", length = 100)
+    private String firstName;
+
+    @Column(name = "middle_name", length = 100)
+    private String middleName;
+
+    @Column(name = "last_name", length = 100)
+    private String lastName;
 
     @Column(name = "email", length = 150)
     private String email;

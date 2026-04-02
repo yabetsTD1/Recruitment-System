@@ -113,6 +113,42 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "User deleted."));
     }
 
+    @PutMapping("/users/{id}/role")
+    public ResponseEntity<?> changeUserRole(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
+        return userRepository.findById(id).map(user -> {
+            String roleName = body.getOrDefault("roleName", "EMPLOYEE").toString();
+            Role role = roleRepository.findByRoleName(roleName)
+                    .orElseGet(() -> roleRepository.findByRoleName("EMPLOYEE").orElseThrow());
+            user.setRole(role);
+            userRepository.save(user);
+            return ResponseEntity.ok(Map.of("message", "Role updated.", "role", role.getRoleName()));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/hired-applicants")
+    public ResponseEntity<?> getHiredApplicants() {
+        List<?> result = applicationRepository.findByApplicationStatus(
+                com.recruitment.recruitmentbackend.entity.Application.ApplicationStatus.HIRED
+        ).stream().map(app -> {
+            com.recruitment.recruitmentbackend.entity.Applicant a = app.getApplicant();
+            Map<String, Object> m = new HashMap<>();
+            m.put("applicantId", a.getId());
+            m.put("fullName", a.getFullName() != null ? a.getFullName()
+                    : ((a.getFirstName() != null ? a.getFirstName() : "") + " "
+                    + (a.getMiddleName() != null ? a.getMiddleName() + " " : "")
+                    + (a.getLastName() != null ? a.getLastName() : "")).trim());
+            m.put("email", a.getEmail() != null ? a.getEmail() : "");
+            m.put("phone", a.getPhone() != null ? a.getPhone() : "");
+            m.put("jobTitle", app.getRecruitment() != null ? app.getRecruitment().getJobTitle() : "");
+            m.put("appliedAt", app.getAppliedAt() != null ? app.getAppliedAt().toLocalDate().toString() : "");
+            // Check if already has a system user account
+            boolean hasAccount = userRepository.existsByEmail(a.getEmail() != null ? a.getEmail() : "");
+            m.put("hasAccount", hasAccount);
+            return m;
+        }).toList();
+        return ResponseEntity.ok(result);
+    }
+
     // ── Dashboard Stats ────────────────────────────────────────────────────────
 
     @GetMapping("/stats")

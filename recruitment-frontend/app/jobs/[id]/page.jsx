@@ -1,27 +1,41 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function JobDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const jobId = params.id;
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (jobId) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/jobs/${jobId}`)
-        .then(r => r.json())
-        .then(d => setJob(d))
-        .catch(() => setJob(null))
-        .finally(() => setLoading(false));
-    }
+    if (!jobId) return;
+    fetch(`${API}/public/jobs/${jobId}`)
+      .then(r => r.json())
+      .then(d => setJob(d))
+      .catch(() => setJob(null))
+      .finally(() => setLoading(false));
   }, [jobId]);
+
+  const handleApply = () => {
+    // Check if already logged in as external user
+    const token = typeof window !== "undefined" ? localStorage.getItem("externalToken") : null;
+    if (token) {
+      // Already logged in — go to apply page with job
+      router.push(`/apply?jobId=${jobId}`);
+    } else {
+      // Not logged in — go to external auth
+      router.push(`/external-auth?jobId=${jobId}`);
+    }
+  };
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ minHeight: "100vh", background: "#f8f9fa", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Segoe UI', sans-serif" }}>
         <p style={{ color: "#7f8c8d", fontSize: "16px" }}>Loading job details...</p>
       </div>
     );
@@ -29,23 +43,17 @@ export default function JobDetailPage() {
 
   if (!job) {
     return (
-      <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
-        {/* Header */}
-        <div style={{ background: "#2c3e50", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{ width: "36px", height: "36px", background: "#2980b9", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px" }}>🛡️</div>
-            <span style={{ color: "white", fontWeight: "700", fontSize: "16px" }}>INSA Recruitment</span>
-          </div>
-          <Link href="/login" style={{ padding: "8px 18px", background: "#27ae60", color: "white", borderRadius: "5px", textDecoration: "none", fontWeight: "600", fontSize: "13px" }}>
-            Staff Login
-          </Link>
+      <div style={{ minHeight: "100vh", background: "#f8f9fa", fontFamily: "'Segoe UI', sans-serif" }}>
+        <div style={{ background: "#2c3e50", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ color: "white", fontWeight: "700", fontSize: "16px" }}>INSA Recruitment</span>
+          <Link href="/jobs" style={{ color: "rgba(255,255,255,0.7)", fontSize: "13px", textDecoration: "none" }}>← Back to Jobs</Link>
         </div>
-        <div style={{ maxWidth: "960px", margin: "0 auto", padding: "80px 20px", textAlign: "center" }}>
-          <div style={{ fontSize: "64px", marginBottom: "16px" }}>❌</div>
-          <h1 style={{ fontSize: "24px", color: "#2c3e50", marginBottom: "12px" }}>Job Not Found</h1>
-          <p style={{ color: "#7f8c8d", marginBottom: "24px" }}>The job you're looking for doesn't exist or has been closed.</p>
-          <Link href="/jobs" style={{ padding: "12px 24px", background: "#2980b9", color: "white", borderRadius: "6px", textDecoration: "none", fontWeight: "600", fontSize: "14px" }}>
-            Back to Jobs
+        <div style={{ maxWidth: "800px", margin: "80px auto", padding: "0 20px", textAlign: "center" }}>
+          <div style={{ fontSize: "56px", marginBottom: "16px" }}>❌</div>
+          <h1 style={{ fontSize: "22px", color: "#2c3e50", marginBottom: "12px" }}>Job Not Found</h1>
+          <p style={{ color: "#7f8c8d", marginBottom: "24px" }}>This position may have been closed or doesn't exist.</p>
+          <Link href="/jobs" style={{ padding: "10px 24px", background: "#2980b9", color: "white", borderRadius: "6px", textDecoration: "none", fontWeight: "600" }}>
+            Browse Open Positions
           </Link>
         </div>
       </div>
@@ -53,288 +61,98 @@ export default function JobDetailPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa", fontFamily: "'Segoe UI', sans-serif" }}>
       {/* Header */}
-      <div style={{ background: "#2c3e50", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ width: "36px", height: "36px", background: "#2980b9", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px" }}>🛡️</div>
-          <span style={{ color: "white", fontWeight: "700", fontSize: "16px" }}>INSA Recruitment</span>
+      <div style={{ background: "#2c3e50", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ width: "32px", height: "32px", background: "#2980b9", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>🛡️</div>
+          <span style={{ color: "white", fontWeight: "700", fontSize: "15px" }}>INSA Recruitment</span>
         </div>
-        <div style={{ display: "flex", gap: "12px" }}>
-          <Link href="/jobs" style={{ padding: "8px 18px", background: "#34495e", color: "white", borderRadius: "5px", textDecoration: "none", fontWeight: "600", fontSize: "13px" }}>
-            ← Back to Jobs
-          </Link>
-          <Link href="/login" style={{ padding: "8px 18px", background: "#27ae60", color: "white", borderRadius: "5px", textDecoration: "none", fontWeight: "600", fontSize: "13px" }}>
-            Staff Login
-          </Link>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <Link href="/jobs" style={{ color: "rgba(255,255,255,0.7)", fontSize: "13px", textDecoration: "none" }}>← All Jobs</Link>
+          <Link href="/login" style={{ padding: "7px 16px", background: "#27ae60", color: "white", borderRadius: "5px", textDecoration: "none", fontWeight: "600", fontSize: "13px" }}>Staff Login</Link>
         </div>
       </div>
 
-      {/* Job Detail Content */}
-      <div style={{ maxWidth: "960px", margin: "0 auto", padding: "40px 20px" }}>
-        {/* Job Header */}
-        <div style={{ background: "white", borderRadius: "10px", padding: "32px", marginBottom: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-            <h1 style={{ fontSize: "28px", fontWeight: "700", color: "#2c3e50", margin: 0, flex: 1 }}>{job.jobTitle}</h1>
-            <span style={{ padding: "6px 16px", borderRadius: "20px", fontSize: "12px", fontWeight: "700", background: "#d1fae5", color: "#065f46" }}>OPEN</span>
-          </div>
-          
-          {job.department && (
-            <p style={{ fontSize: "16px", color: "#7f8c8d", margin: "0 0 24px 0" }}>🏢 {job.department}</p>
-          )}
-
-          {/* Key Information Grid */}
-          <div style={{ 
-            display: "grid", 
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
-            gap: "20px",
-            padding: "24px",
-            background: "#f8f9fa",
-            borderRadius: "8px"
-          }}>
-            {job.batchCode && (
-              <div>
-                <p style={{ fontSize: "12px", color: "#95a5a6", margin: "0 0 6px 0", fontWeight: "600", textTransform: "uppercase" }}>Batch Code</p>
-                <p style={{ fontSize: "16px", color: "#2c3e50", margin: 0, fontWeight: "700" }}>{job.batchCode}</p>
+      <div style={{ maxWidth: "860px", margin: "0 auto", padding: "32px 20px" }}>
+        {/* Job Header Card */}
+        <div style={{ background: "white", borderRadius: "12px", padding: "28px 32px", marginBottom: "20px", boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                <h1 style={{ fontSize: "24px", fontWeight: "700", color: "#1f2937", margin: 0 }}>{job.jobTitle}</h1>
+                <span style={{ padding: "3px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: "700", background: "#d1fae5", color: "#065f46" }}>Open</span>
               </div>
-            )}
-            {job.recruitmentType && (
-              <div>
-                <p style={{ fontSize: "12px", color: "#95a5a6", margin: "0 0 6px 0", fontWeight: "600", textTransform: "uppercase" }}>Recruitment Type</p>
-                <p style={{ fontSize: "16px", color: "#2c3e50", margin: 0, fontWeight: "700" }}>{job.recruitmentType}</p>
+              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+                {job.department && <span style={{ fontSize: "13px", color: "#6b7280" }}>🏢 {job.department}</span>}
+                {job.jobLocation && <span style={{ fontSize: "13px", color: "#6b7280" }}>📍 {job.jobLocation}</span>}
+                {job.salary && <span style={{ fontSize: "13px", color: "#6b7280" }}>💰 {job.salary}</span>}
+                {job.employmentType && <span style={{ fontSize: "13px", color: "#6b7280" }}>📄 {job.employmentType}</span>}
               </div>
-            )}
-            {job.salary && (
-              <div>
-                <p style={{ fontSize: "12px", color: "#95a5a6", margin: "0 0 6px 0", fontWeight: "600", textTransform: "uppercase" }}>Salary</p>
-                <p style={{ fontSize: "16px", color: "#27ae60", margin: 0, fontWeight: "700" }}>{job.salary}</p>
-              </div>
-            )}
-            <div>
-              <p style={{ fontSize: "12px", color: "#95a5a6", margin: "0 0 6px 0", fontWeight: "600", textTransform: "uppercase" }}>Vacancies</p>
-              <p style={{ fontSize: "16px", color: "#2c3e50", margin: 0, fontWeight: "700" }}>{job.vacancyNumber || 0} Position{job.vacancyNumber !== 1 ? "s" : ""}</p>
             </div>
-            {(job.deadline || job.closingDate) && (
-              <div>
-                <p style={{ fontSize: "12px", color: "#95a5a6", margin: "0 0 6px 0", fontWeight: "600", textTransform: "uppercase" }}>Application Deadline</p>
-                <p style={{ fontSize: "16px", color: "#e67e22", margin: 0, fontWeight: "700" }}>{job.deadline || job.closingDate}</p>
-              </div>
-            )}
+            <button onClick={handleApply}
+              style={{ padding: "12px 28px", background: "linear-gradient(135deg, #27ae60, #229954)", color: "white", border: "none", borderRadius: "8px", fontWeight: "700", fontSize: "15px", cursor: "pointer", boxShadow: "0 4px 12px rgba(39,174,96,0.3)", whiteSpace: "nowrap" }}>
+              Apply Now →
+            </button>
           </div>
         </div>
 
-        {/* Job Details */}
-        <div style={{ background: "white", borderRadius: "10px", padding: "32px", marginBottom: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-          <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#2c3e50", marginBottom: "20px" }}>Job Details</h2>
-          
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            {job.jobLocation && (
-              <div style={{ display: "flex", gap: "12px" }}>
-                <span style={{ fontSize: "20px" }}>📍</span>
-                <div>
-                  <p style={{ fontSize: "13px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>Location</p>
-                  <p style={{ fontSize: "15px", color: "#2c3e50", margin: 0 }}>{job.jobLocation}</p>
-                </div>
-              </div>
-            )}
-            
-            {job.employmentType && (
-              <div style={{ display: "flex", gap: "12px" }}>
-                <span style={{ fontSize: "20px" }}>📄</span>
-                <div>
-                  <p style={{ fontSize: "13px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>Employment Type</p>
-                  <p style={{ fontSize: "15px", color: "#2c3e50", margin: 0 }}>{job.employmentType}</p>
-                </div>
-              </div>
-            )}
-            
-            {job.hiringType && (
-              <div style={{ display: "flex", gap: "12px" }}>
-                <span style={{ fontSize: "20px" }}>🔖</span>
-                <div>
-                  <p style={{ fontSize: "13px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>Hiring Type</p>
-                  <p style={{ fontSize: "15px", color: "#2c3e50", margin: 0 }}>{job.hiringType}</p>
-                </div>
-              </div>
-            )}
-
-            {job.positionName && (
-              <div style={{ display: "flex", gap: "12px" }}>
-                <span style={{ fontSize: "20px" }}>💼</span>
-                <div>
-                  <p style={{ fontSize: "13px", color: "#95a5a6", margin: "0 0 4px 0", fontWeight: "600" }}>Position Name</p>
-                  <p style={{ fontSize: "15px", color: "#2c3e50", margin: 0 }}>{job.positionName}</p>
-                </div>
-              </div>
-            )}
-          </div>
+        {/* Key Info Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "14px", marginBottom: "20px" }}>
+          {[
+            { label: "Batch Code", value: job.batchCode },
+            { label: "Vacancies", value: job.vacancyNumber ? `${job.vacancyNumber} Position(s)` : null },
+            { label: "Hiring Type", value: job.hiringType },
+            { label: "Recruitment Type", value: job.recruitmentType },
+            { label: "Closing Date", value: job.closingDate, highlight: true },
+          ].filter(i => i.value).map((item, idx) => (
+            <div key={idx} style={{ background: "white", borderRadius: "8px", padding: "16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div style={{ fontSize: "11px", fontWeight: "700", color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>{item.label}</div>
+              <div style={{ fontSize: "14px", fontWeight: "600", color: item.highlight ? "#f59e0b" : "#1f2937" }}>{item.value}</div>
+            </div>
+          ))}
         </div>
 
-        {/* Job Description */}
+        {/* Description */}
         {job.description && (
-          <div style={{ background: "white", borderRadius: "10px", padding: "32px", marginBottom: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-            <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#2c3e50", marginBottom: "16px" }}>Job Description</h2>
-            <div style={{ fontSize: "15px", color: "#5d6d7e", lineHeight: "1.8", whiteSpace: "pre-wrap" }}>
-              {job.description}
-            </div>
+          <div style={{ background: "white", borderRadius: "12px", padding: "24px 28px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <h2 style={{ fontSize: "16px", fontWeight: "700", color: "#1f2937", marginBottom: "14px" }}>Job Description</h2>
+            <div style={{ fontSize: "14px", color: "#4b5563", lineHeight: "1.8", whiteSpace: "pre-wrap" }}>{job.description}</div>
           </div>
         )}
 
-        {/* Requirements & Qualifications */}
-        {((job.qualificationEntries && job.qualificationEntries.length > 0) || job.minDegree || job.requiredSkills || job.competency || job.competencyFramework) ? (
-          <div style={{ background: "white", borderRadius: "10px", padding: "32px", marginBottom: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-            <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#2c3e50", marginBottom: "24px" }}>Requirements & Qualifications</h2>
-            
-            {/* Display qualification entries if available */}
-            {job.qualificationEntries && job.qualificationEntries.length > 0 ? (
-              job.qualificationEntries.map((entry, index) => (
-                <div key={entry.id || index} style={{ marginBottom: index < job.qualificationEntries.length - 1 ? "32px" : "0", paddingBottom: index < job.qualificationEntries.length - 1 ? "32px" : "0", borderBottom: index < job.qualificationEntries.length - 1 ? "2px solid #f0f3f4" : "none" }}>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                    {/* Education Level */}
-                    {entry.educationLevel && (
-                      <div>
-                        <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#2c3e50", marginBottom: "8px" }}>Education Level:</h3>
-                        <p style={{ fontSize: "14px", color: "#5d6d7e", lineHeight: "1.7", margin: 0 }}>{entry.educationLevel}</p>
-                      </div>
-                    )}
-
-                    {/* Field of Study */}
-                    {entry.fieldOfStudy && (
-                      <div>
-                        <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#2c3e50", marginBottom: "8px" }}>Field Of Study:</h3>
-                        <p style={{ fontSize: "14px", color: "#5d6d7e", lineHeight: "1.7", margin: 0 }}>{entry.fieldOfStudy}</p>
-                      </div>
-                    )}
-
-                    {/* Min Experience */}
-                    {entry.minExperience && (
-                      <div>
-                        <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#2c3e50", marginBottom: "8px" }}>Min Experience:</h3>
-                        <p style={{ fontSize: "14px", color: "#5d6d7e", lineHeight: "1.7", margin: 0 }}>{entry.minExperience} {entry.minExperience === "1" ? "year" : "years"}</p>
-                      </div>
-                    )}
-
-                    {/* Education Category as Qualification */}
-                    {entry.educationCategory && (
-                      <div>
-                        <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#2c3e50", marginBottom: "8px" }}>QUALIFICATION:</h3>
-                        <p style={{ fontSize: "14px", color: "#5d6d7e", lineHeight: "1.7", margin: 0 }}>{entry.educationCategory}</p>
-                      </div>
-                    )}
-
-                    {/* Knowledge */}
-                    {entry.knowledge && (
-                      <div>
-                        <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#2c3e50", marginBottom: "8px" }}>KNOWLEDGE:</h3>
-                        <div style={{ fontSize: "14px", color: "#5d6d7e", lineHeight: "1.7" }}>
-                          {entry.knowledge.split('\n').filter(line => line.trim()).map((line, idx) => (
-                            <p key={idx} style={{ margin: "0 0 8px 0" }}>• {line.trim()}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Skills */}
-                    {entry.skill && (
-                      <div>
-                        <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#2c3e50", marginBottom: "8px" }}>SKILL:</h3>
-                        <div style={{ fontSize: "14px", color: "#5d6d7e", lineHeight: "1.7" }}>
-                          {entry.skill.split('\n').filter(line => line.trim()).map((line, idx) => (
-                            <p key={idx} style={{ margin: "0 0 8px 0" }}>• {line.trim()}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Key Competency */}
-                    {entry.competency && (
-                      <div>
-                        <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#2c3e50", marginBottom: "8px" }}>KEY COMPETENCY:</h3>
-                        <div style={{ fontSize: "14px", color: "#5d6d7e", lineHeight: "1.7" }}>
-                          {entry.competency.split('\n').filter(line => line.trim()).map((line, idx) => (
-                            <p key={idx} style={{ margin: "0 0 8px 0" }}>• {line.trim()}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
-            ) : (
-              /* Fallback: Display old format from JobQualification entity */
-              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                {job.minDegree && (
-                  <div>
-                    <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#2c3e50", marginBottom: "8px" }}>Education Level:</h3>
-                    <p style={{ fontSize: "14px", color: "#5d6d7e", lineHeight: "1.7", margin: 0 }}>{job.minDegree}</p>
-                  </div>
-                )}
-
-                {job.minExperience && (
-                  <div>
-                    <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#2c3e50", marginBottom: "8px" }}>Min Experience:</h3>
-                    <p style={{ fontSize: "14px", color: "#5d6d7e", lineHeight: "1.7", margin: 0 }}>{job.minExperience}</p>
-                  </div>
-                )}
-
-                {job.minDegree && (
-                  <div>
-                    <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#2c3e50", marginBottom: "8px" }}>QUALIFICATION:</h3>
-                    <p style={{ fontSize: "14px", color: "#5d6d7e", lineHeight: "1.7", margin: 0 }}>{job.minDegree}</p>
-                  </div>
-                )}
-
-                {(job.competencyFramework || job.competency) && (
-                  <div>
-                    <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#2c3e50", marginBottom: "8px" }}>KNOWLEDGE:</h3>
-                    <div style={{ fontSize: "14px", color: "#5d6d7e", lineHeight: "1.7" }}>
-                      {(job.competencyFramework || job.competency).split('\n').filter(line => line.trim()).map((line, idx) => (
-                        <p key={idx} style={{ margin: "0 0 8px 0" }}>• {line.trim()}</p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {job.requiredSkills && (
-                  <div>
-                    <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#2c3e50", marginBottom: "8px" }}>SKILL:</h3>
-                    <div style={{ fontSize: "14px", color: "#5d6d7e", lineHeight: "1.7" }}>
-                      {job.requiredSkills.split('\n').filter(line => line.trim()).map((line, idx) => (
-                        <p key={idx} style={{ margin: "0 0 8px 0" }}>• {line.trim()}</p>
-                      ))}
-                    </div>
-                  </div>
-                )}
+        {/* Qualifications */}
+        {(job.qualificationEntries?.length > 0 || job.minDegree || job.requiredSkills) && (
+          <div style={{ background: "white", borderRadius: "12px", padding: "24px 28px", marginBottom: "20px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+            <h2 style={{ fontSize: "16px", fontWeight: "700", color: "#1f2937", marginBottom: "16px" }}>Requirements & Qualifications</h2>
+            {job.qualificationEntries?.length > 0 ? job.qualificationEntries.map((entry, i) => (
+              <div key={i} style={{ marginBottom: "16px", paddingBottom: "16px", borderBottom: i < job.qualificationEntries.length - 1 ? "1px solid #f3f4f6" : "none" }}>
+                {entry.educationLevel && <div style={{ marginBottom: "8px" }}><span style={{ fontSize: "12px", fontWeight: "700", color: "#6b7280", textTransform: "uppercase" }}>Education: </span><span style={{ fontSize: "14px", color: "#1f2937" }}>{entry.educationLevel}</span></div>}
+                {entry.fieldOfStudy && <div style={{ marginBottom: "8px" }}><span style={{ fontSize: "12px", fontWeight: "700", color: "#6b7280", textTransform: "uppercase" }}>Field: </span><span style={{ fontSize: "14px", color: "#1f2937" }}>{entry.fieldOfStudy}</span></div>}
+                {entry.minExperience && <div style={{ marginBottom: "8px" }}><span style={{ fontSize: "12px", fontWeight: "700", color: "#6b7280", textTransform: "uppercase" }}>Experience: </span><span style={{ fontSize: "14px", color: "#1f2937" }}>{entry.minExperience} year(s)</span></div>}
+                {entry.skill && <div style={{ marginBottom: "8px" }}><span style={{ fontSize: "12px", fontWeight: "700", color: "#6b7280", textTransform: "uppercase" }}>Skills: </span><span style={{ fontSize: "14px", color: "#1f2937" }}>{entry.skill}</span></div>}
+              </div>
+            )) : (
+              <div>
+                {job.minDegree && <div style={{ marginBottom: "8px" }}><span style={{ fontSize: "12px", fontWeight: "700", color: "#6b7280", textTransform: "uppercase" }}>Education: </span><span style={{ fontSize: "14px", color: "#1f2937" }}>{job.minDegree}</span></div>}
+                {job.requiredSkills && <div style={{ marginBottom: "8px" }}><span style={{ fontSize: "12px", fontWeight: "700", color: "#6b7280", textTransform: "uppercase" }}>Skills: </span><span style={{ fontSize: "14px", color: "#1f2937" }}>{job.requiredSkills}</span></div>}
               </div>
             )}
           </div>
-        ) : null}
+        )}
 
-        {/* Apply Button */}
-        <div style={{ background: "white", borderRadius: "10px", padding: "32px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", textAlign: "center" }}>
-          <h3 style={{ fontSize: "18px", fontWeight: "700", color: "#2c3e50", marginBottom: "12px" }}>Ready to Apply?</h3>
-          <p style={{ fontSize: "14px", color: "#7f8c8d", marginBottom: "24px" }}>Submit your application and join the Information Network Security Administration team.</p>
-          <Link href={`/auth/login?redirect=/apply?id=${job.id}`}
-            style={{ 
-              padding: "14px 40px", 
-              background: "#27ae60", 
-              color: "white", 
-              borderRadius: "6px", 
-              textDecoration: "none", 
-              fontWeight: "700", 
-              fontSize: "16px",
-              display: "inline-block",
-              transition: "background 0.2s"
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = "#229954"}
-            onMouseLeave={(e) => e.currentTarget.style.background = "#27ae60"}>
+        {/* Apply CTA */}
+        <div style={{ background: "linear-gradient(135deg, #1e293b, #334155)", borderRadius: "12px", padding: "28px 32px", textAlign: "center" }}>
+          <h3 style={{ fontSize: "18px", fontWeight: "700", color: "white", marginBottom: "8px" }}>Ready to Apply?</h3>
+          <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", marginBottom: "20px" }}>Join the Information Network Security Administration team.</p>
+          <button onClick={handleApply}
+            style={{ padding: "13px 40px", background: "linear-gradient(135deg, #27ae60, #229954)", color: "white", border: "none", borderRadius: "8px", fontWeight: "700", fontSize: "15px", cursor: "pointer", boxShadow: "0 4px 12px rgba(39,174,96,0.3)" }}>
             Apply Now →
-          </Link>
+          </button>
         </div>
       </div>
 
-      {/* Footer */}
-      <div style={{ textAlign: "center", padding: "24px", color: "#9ca3af", fontSize: "12px", borderTop: "1px solid #ecf0f1" }}>
+      <div style={{ textAlign: "center", padding: "20px", color: "#9ca3af", fontSize: "12px", borderTop: "1px solid #ecf0f1", marginTop: "32px" }}>
         © 2025 Information Network Security Administration. All rights reserved.
       </div>
     </div>

@@ -8,4 +8,5 @@ public interface ApplicationRepository extends JpaRepository<Application, Intege
     List<Application> findByRecruitmentId(Integer recruitmentId);
     List<Application> findByApplicantId(Integer applicantId);
     boolean existsByRecruitmentIdAndApplicantId(Integer recruitmentId, Integer applicantId);
+    List<Application> findByApplicationStatus(Application.ApplicationStatus status);
 }

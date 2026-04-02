@@ -1,21 +1,50 @@
 package com.recruitment.recruitmentbackend.controller;
 
-import com.recruitment.recruitmentbackend.entity.*;
-import com.recruitment.recruitmentbackend.repository.*;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.recruitment.recruitmentbackend.entity.Advertisement;
+import com.recruitment.recruitmentbackend.entity.Applicant;
+import com.recruitment.recruitmentbackend.entity.Application;
+import com.recruitment.recruitmentbackend.entity.ExamResult;
+import com.recruitment.recruitmentbackend.entity.JobQualification;
+import com.recruitment.recruitmentbackend.entity.Recruitment;
+import com.recruitment.recruitmentbackend.entity.RecruitmentApproval;
+import com.recruitment.recruitmentbackend.entity.RecruitmentCriteria;
+import com.recruitment.recruitmentbackend.entity.RecruitmentPost;
+import com.recruitment.recruitmentbackend.repository.AdvertisementRepository;
+import com.recruitment.recruitmentbackend.repository.ApplicantRepository;
+import com.recruitment.recruitmentbackend.repository.ApplicationRepository;
+import com.recruitment.recruitmentbackend.repository.ExamResultRepository;
+import com.recruitment.recruitmentbackend.repository.JobQualificationRepository;
+import com.recruitment.recruitmentbackend.repository.OrgUnitRepository;
+import com.recruitment.recruitmentbackend.repository.RecruitmentCriteriaRepository;
+import com.recruitment.recruitmentbackend.repository.RecruitmentPostRepository;
+import com.recruitment.recruitmentbackend.repository.RecruitmentRepository;
+import com.recruitment.recruitmentbackend.repository.RecruitmentRequestRepository;
+import com.recruitment.recruitmentbackend.repository.RegisteredJobRepository;
+import com.recruitment.recruitmentbackend.repository.UserRepository;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/recruitments")
@@ -791,6 +820,9 @@ public class RecruitmentController {
         Map<String, Object> m = new HashMap<>();
         m.put("id", a.getId());
         m.put("applicantName", a.getApplicant().getFullName() != null ? a.getApplicant().getFullName() : "");
+        m.put("applicantFirstName", a.getApplicant().getFirstName() != null ? a.getApplicant().getFirstName() : "");
+        m.put("applicantMiddleName", a.getApplicant().getMiddleName() != null ? a.getApplicant().getMiddleName() : "");
+        m.put("applicantLastName", a.getApplicant().getLastName() != null ? a.getApplicant().getLastName() : "");
         m.put("applicantEmail", a.getApplicant().getEmail() != null ? a.getApplicant().getEmail() : "");
         m.put("applicantPhone", a.getApplicant().getPhone() != null ? a.getApplicant().getPhone() : "");
         m.put("applicantLocation", a.getApplicant().getLocation() != null ? a.getApplicant().getLocation() : "");

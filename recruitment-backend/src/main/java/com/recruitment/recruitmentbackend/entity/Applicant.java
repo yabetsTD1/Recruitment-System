@@ -61,6 +61,9 @@ public class Applicant {
     @Column(name = "gender", length = 20)
     private String gender;
 
+    @Column(name = "title", length = 20)
+    private String title;
+
     @Column(name = "github_url", length = 255)
     private String githubUrl;
 

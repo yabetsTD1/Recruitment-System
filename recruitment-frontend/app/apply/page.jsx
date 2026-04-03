@@ -129,6 +129,7 @@ function ApplyForm({ jobIdOverride }) {
             phoneNumber2: profile.phoneNumber2 || "",
             residentialAddress: profile.location || "",
             gender: profile.gender || "",
+            title: profile.title || "",
             maritalStatus: profile.maritalStatus || "",
             dateOfBirth: profile.dateOfBirth || "",
             githubUrl: profile.githubUrl || "",
@@ -355,14 +356,9 @@ function ApplyForm({ jobIdOverride }) {
 
           {currentStep === 6 && (
             <DocumentsSection
-              documents={documents}
-              setDocuments={setDocuments}
-              handleFileUpload={handleFileUpload}
-              removeDocument={removeDocument}
               expandedSections={expandedSections}
               toggleSection={toggleSection}
               goToPreviousStep={goToPreviousStep}
-              submitting={submitting}
               inputStyle={inputStyle}
               labelStyle={labelStyle}
             />
@@ -417,6 +413,7 @@ export default function ApplyPage() {
   const [applications, setApplications] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [dismissedNotifs, setDismissedNotifs] = useState(new Set());
   const [dataLoaded, setDataLoaded] = useState(false);
   const [fullName, setFullName] = useState("Applicant");
   const [selectedJobId, setSelectedJobId] = useState(null);
@@ -426,46 +423,12 @@ export default function ApplyPage() {
   const [viewingJob, setViewingJob] = useState(null); // job detail modal
   const [loadingJobDetail, setLoadingJobDetail] = useState(false);
 
-  const applyForJob = async (jobId) => {
+  const applyForJob = (jobId) => {
     const email = localStorage.getItem("externalEmail");
     if (!email) { router.push(`/external-auth?jobId=${jobId}`); return; }
-    setApplyingJobId(jobId);
-    try {
-      // Fetch applicant profile to get their details
-      const profileRes = await fetch(`${API}/public/applicant/profile?email=${encodeURIComponent(email)}`);
-      const profile = await profileRes.json();
-      // Submit application
-      const res = await fetch(`${API}/public/apply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName: profile.firstName || "",
-          middleName: profile.middleName || "",
-          lastName: profile.lastName || "",
-          email: profile.email || email,
-          phone: profile.phone || "",
-          gender: profile.gender || "",
-          location: profile.location || "",
-          recruitmentId: Number(jobId),
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setApplyMsg(p => ({ ...p, [jobId]: data.message || "Failed to apply" }));
-        setTimeout(() => setApplyMsg(p => { const n = { ...p }; delete n[jobId]; return n; }), 4000);
-        return;
-      }
-      // Refresh applications list
-      const appsRes = await fetch(`${API}/public/applicant/applications?email=${encodeURIComponent(email)}`);
-      const apps = await appsRes.json();
-      if (Array.isArray(apps)) setApplications(apps);
-      setApplyMsg(p => ({ ...p, [jobId]: "success" }));
-    } catch {
-      setApplyMsg(p => ({ ...p, [jobId]: "Network error" }));
-      setTimeout(() => setApplyMsg(p => { const n = { ...p }; delete n[jobId]; return n; }), 4000);
-    } finally {
-      setApplyingJobId(null);
-    }
+    setSelectedJobId(jobId);
+    setActivePage("apply");
+    setViewingJob(null);
   };
 
   const hasApplied = (jobId) => applications.some(a => a.recruitmentId === jobId);
@@ -560,11 +523,11 @@ export default function ApplyPage() {
           <span style={{ fontWeight: "700", fontSize: "15px", color: "#1f2937" }}>አማ ሪ | REC</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {notifications.length > 0 && (
+          {notifications.filter((_, i) => !dismissedNotifs.has(i)).length > 0 && (
             <div style={{ position: "relative", cursor: "pointer" }} onClick={() => setActivePage("home")}>
               <span style={{ fontSize: "20px" }}>🔔</span>
               <span style={{ position: "absolute", top: "-4px", right: "-4px", background: "#ef4444", color: "white", borderRadius: "50%", width: "16px", height: "16px", fontSize: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "700" }}>
-                {notifications.length}
+                {notifications.filter((_, i) => !dismissedNotifs.has(i)).length}
               </span>
             </div>
           )}
@@ -624,14 +587,18 @@ export default function ApplyPage() {
               <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#1f2937", margin: "0 0 4px 0" }}>Welcome back, {fullName.split(" ")[0]} 👋</h1>
               <p style={{ color: "#6b7280", fontSize: "13px", marginBottom: "24px" }}>Here's your recruitment overview</p>
 
-              {notifications.length > 0 && (
+              {notifications.filter((_, i) => !dismissedNotifs.has(i)).length > 0 && (
                 <div style={{ marginBottom: "24px" }}>
                   <h3 style={{ fontSize: "13px", fontWeight: "700", color: "#374151", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Notifications</h3>
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {notifications.map((n, i) => (
+                    {notifications.map((n, i) => dismissedNotifs.has(i) ? null : (
                       <div key={i} style={{ padding: "12px 16px", borderRadius: "8px", display: "flex", alignItems: "center", gap: "12px", background: n.type === "success" ? "#d1fae5" : n.type === "error" ? "#fee2e2" : "#fef3c7", border: `1px solid ${n.type === "success" ? "#a7f3d0" : n.type === "error" ? "#fca5a5" : "#fde68a"}` }}>
                         <span style={{ fontSize: "18px" }}>{n.icon}</span>
-                        <span style={{ fontSize: "13px", fontWeight: "500", color: n.type === "success" ? "#065f46" : n.type === "error" ? "#991b1b" : "#92400e" }}>{n.msg}</span>
+                        <span style={{ fontSize: "13px", fontWeight: "500", color: n.type === "success" ? "#065f46" : n.type === "error" ? "#991b1b" : "#92400e", flex: 1 }}>{n.msg}</span>
+                        <button onClick={() => setDismissedNotifs(prev => new Set([...prev, i]))}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: n.type === "success" ? "#065f46" : n.type === "error" ? "#991b1b" : "#92400e", fontSize: "16px", lineHeight: 1, padding: "2px 4px", opacity: 0.6, flexShrink: 0 }}>
+                          ×
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -668,11 +635,9 @@ export default function ApplyPage() {
                     </div>
                     {hasApplied(job.id)
                       ? <span style={{ padding: "5px 14px", background: "#d1fae5", color: "#065f46", borderRadius: "6px", fontSize: "12px", fontWeight: "700" }}>✓ Applied</span>
-                      : applyMsg[job.id] && applyMsg[job.id] !== "success"
-                      ? <span style={{ padding: "5px 14px", background: "#fee2e2", color: "#b91c1c", borderRadius: "6px", fontSize: "11px", fontWeight: "600" }}>{applyMsg[job.id]}</span>
-                      : <button onClick={() => applyForJob(job.id)} disabled={applyingJobId === job.id}
-                          style={{ padding: "5px 14px", background: applyingJobId === job.id ? "#94a3b8" : "#3b82f6", color: "white", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: applyingJobId === job.id ? "not-allowed" : "pointer" }}>
-                          {applyingJobId === job.id ? "Applying..." : "Apply"}
+                      : <button onClick={() => applyForJob(job.id)}
+                          style={{ padding: "5px 14px", background: "#3b82f6", color: "white", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
+                          Apply
                         </button>
                     }
                   </div>
@@ -711,11 +676,9 @@ export default function ApplyPage() {
                             <div style={{ display: "flex", gap: "8px" }}>
                               {hasApplied(job.id)
                                 ? <span style={{ padding: "5px 12px", background: "#d1fae5", color: "#065f46", borderRadius: "6px", fontSize: "12px", fontWeight: "700" }}>✓ Applied</span>
-                                : applyMsg[job.id] && applyMsg[job.id] !== "success"
-                                ? <span style={{ padding: "5px 12px", background: "#fee2e2", color: "#b91c1c", borderRadius: "6px", fontSize: "11px", fontWeight: "600" }}>{applyMsg[job.id]}</span>
-                                : <button onClick={() => applyForJob(job.id)} disabled={applyingJobId === job.id}
-                                    style={{ padding: "5px 12px", background: applyingJobId === job.id ? "#94a3b8" : "#3b82f6", color: "white", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: applyingJobId === job.id ? "not-allowed" : "pointer" }}>
-                                    {applyingJobId === job.id ? "Applying..." : "Apply"}
+                                : <button onClick={() => applyForJob(job.id)}
+                                    style={{ padding: "5px 12px", background: "#3b82f6", color: "white", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
+                                    Apply
                                   </button>
                               }
                               <button type="button" onClick={() => viewJobDetails(job.id)}
@@ -805,6 +768,7 @@ export default function ApplyPage() {
                     { label: "Email", value: applicant?.email },
                     { label: "Phone", value: applicant?.phone },
                     { label: "Gender", value: applicant?.gender },
+                    { label: "Title", value: applicant?.title },
                     { label: "Location", value: applicant?.location },
                     { label: "Marital Status", value: applicant?.maritalStatus },
                     { label: "Date of Birth", value: applicant?.dateOfBirth },
@@ -915,10 +879,9 @@ export default function ApplyPage() {
                   {hasApplied(viewingJob.id) ? (
                     <span style={{ padding: "10px 20px", background: "#d1fae5", color: "#065f46", borderRadius: "8px", fontSize: "13px", fontWeight: "700" }}>✓ Already Applied</span>
                   ) : (
-                    <button onClick={() => { setViewingJob(null); applyForJob(viewingJob.id); }}
-                      disabled={applyingJobId === viewingJob.id}
-                      style={{ padding: "10px 24px", background: applyingJobId === viewingJob.id ? "#94a3b8" : "linear-gradient(135deg, #27ae60, #229954)", color: "white", border: "none", borderRadius: "8px", fontWeight: "700", fontSize: "13px", cursor: applyingJobId === viewingJob.id ? "not-allowed" : "pointer", boxShadow: "0 4px 12px rgba(39,174,96,0.3)" }}>
-                      {applyingJobId === viewingJob.id ? "Applying..." : "Apply Now →"}
+                    <button onClick={() => applyForJob(viewingJob.id)}
+                      style={{ padding: "10px 24px", background: "linear-gradient(135deg, #27ae60, #229954)", color: "white", border: "none", borderRadius: "8px", fontWeight: "700", fontSize: "13px", cursor: "pointer", boxShadow: "0 4px 12px rgba(39,174,96,0.3)" }}>
+                      Apply Now →
                     </button>
                   )}
                 </div>

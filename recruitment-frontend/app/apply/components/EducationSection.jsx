@@ -68,9 +68,9 @@ export default function EducationSection({
       setSaveMsg(p => ({ ...p, [index]: "success:Saved!" }));
       setTimeout(() => setSaveMsg(p => { const n = { ...p }; delete n[index]; return n; }), 3000);
       // Refresh saved records
-      const email = getEmail();
-      if (email) {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/applicant/education?email=${encodeURIComponent(email)}`)
+      const refreshEmail = getEmail();
+      if (refreshEmail) {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/applicant/education?email=${encodeURIComponent(refreshEmail)}`)
           .then(r => r.json()).then(d => { if (Array.isArray(d)) setSavedRecords(d); }).catch(() => {});
       }
     } catch { setSaveMsg(p => ({ ...p, [index]: "error:Network error" })); }
@@ -280,7 +280,12 @@ export default function EducationSection({
                   </div>
                   <div>
                     <label style={{ ...labelStyle, fontSize: "12px" }}>Paid By:</label>
-                    <input style={inputStyle} placeholder="Enter Payment Source" value={edu.paidBy} onChange={e => updateEducation(index, "paidBy", e.target.value)} />
+                    <select style={inputStyle} value={edu.paidBy} onChange={e => updateEducation(index, "paidBy", e.target.value)}>
+                      <option value="">Select</option>
+                      <option value="Private">Private</option>
+                      <option value="Government">Government</option>
+                      <option value="Others">Others</option>
+                    </select>
                   </div>
                   <div>
                     <label style={{ ...labelStyle, fontSize: "12px" }}>End Date:</label>

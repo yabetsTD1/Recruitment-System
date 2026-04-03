@@ -37,6 +37,8 @@ export default function RecruitmentApprovalPage() {
   const [form, setForm] = useState({ comment: "", advertisementType: "", decision: "", vacancyType: "Inside" });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -122,11 +124,37 @@ export default function RecruitmentApprovalPage() {
           <div style={{ padding: "12px 16px", background: "#f8f9fa", borderBottom: "1px solid #ecf0f1", fontSize: "13px", fontWeight: "700", color: "#2c3e50" }}>
             Requests ({data.length})
           </div>
+          {/* Search */}
+          <div style={{ padding: "8px 12px", borderBottom: "1px solid #ecf0f1", display: "flex", alignItems: "center", gap: "8px", background: "white" }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" style={{ flexShrink: 0 }}>
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Batch code or name..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ border: "none", outline: "none", fontSize: "12px", background: "transparent", flex: 1, color: "#2c3e50" }}
+            />
+            {search && (
+              <button onClick={() => setSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "14px", lineHeight: 1, padding: 0 }}>×</button>
+            )}
+          </div>
           {loading ? (
             <p style={{ padding: "24px", textAlign: "center", color: "#7f8c8d" }}>Loading...</p>
           ) : data.length === 0 ? (
             <p style={{ padding: "24px", textAlign: "center", color: "#7f8c8d" }}>No requests yet.</p>
-          ) : data.map((row, idx) => (
+          ) : data
+              .filter(row => {
+                const q = search.toLowerCase().trim();
+                if (!q) return true;
+                return (
+                  (row.batchCode || "").toLowerCase().includes(q) ||
+                  (row.jobTitle || "").toLowerCase().includes(q)
+                );
+              })
+              .slice(0, (search.trim() || showAll) ? undefined : 5)
+              .map((row, idx) => (
             <div key={row.id} onClick={() => handleSelect(row)}
               style={{
                 padding: "12px 16px", cursor: "pointer", borderBottom: "1px solid #f0f3f4",
@@ -148,6 +176,15 @@ export default function RecruitmentApprovalPage() {
               </div>
             </div>
           ))}
+          {/* Show all / Show less footer */}
+          {!loading && data.length > 5 && !search.trim() && (
+            <div style={{ padding: "10px 12px", borderTop: "1px solid #f0f3f4", textAlign: "center" }}>
+              <button onClick={() => setShowAll(v => !v)}
+                style={{ background: "none", border: "none", color: "#2980b9", fontWeight: "600", fontSize: "12px", cursor: "pointer" }}>
+                {showAll ? "▲ Show recent 5 only" : `▼ Show all ${data.length}`}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right: detail */}

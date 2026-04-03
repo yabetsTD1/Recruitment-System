@@ -246,6 +246,7 @@ public class PublicController {
         String location;
         String residentialAddress;
         String gender;
+        String title;
         String maritalStatus;
         String dateOfBirth;
         String githubUrl;
@@ -271,6 +272,7 @@ public class PublicController {
             if (location != null && !location.isEmpty()) a.setLocation(location);
 
             if (req.getGender() != null && !req.getGender().isEmpty()) a.setGender(req.getGender());
+            if (req.getTitle() != null) a.setTitle(req.getTitle());
             if (req.getGithubUrl() != null) a.setGithubUrl(req.getGithubUrl());
             if (req.getLinkedinUrl() != null) a.setLinkedinUrl(req.getLinkedinUrl());
 
@@ -376,6 +378,7 @@ public class PublicController {
             m.put("email", a.getEmail() != null ? a.getEmail() : "");
             m.put("phone", a.getPhone() != null ? a.getPhone() : "");
             m.put("gender", a.getGender() != null ? a.getGender() : "");
+            m.put("title", a.getTitle() != null ? a.getTitle() : "");
             m.put("location", a.getLocation() != null ? a.getLocation() : "");
             m.put("githubUrl", a.getGithubUrl() != null ? a.getGithubUrl() : "");
             m.put("linkedinUrl", a.getLinkedinUrl() != null ? a.getLinkedinUrl() : "");
@@ -581,6 +584,58 @@ public class PublicController {
     @org.springframework.web.bind.annotation.DeleteMapping("/applicant/language/{id}")
     public ResponseEntity<?> deleteLanguage(@PathVariable Integer id) {
         languageRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("message", "Deleted"));
+    }
+
+    // ── Applicant Document CRUD ──
+
+    @PostMapping(value = "/applicant/document", consumes = "multipart/form-data")
+    public ResponseEntity<?> uploadDocument(
+            @org.springframework.web.bind.annotation.RequestParam("email") String email,
+            @org.springframework.web.bind.annotation.RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        Applicant applicant = applicantRepository.findByEmail(email).orElse(null);
+        if (applicant == null) return ResponseEntity.badRequest().body(Map.of("message", "Applicant not found"));
+        try {
+            ApplicantDocument doc = new ApplicantDocument();
+            doc.setApplicant(applicant);
+            doc.setFileName(file.getOriginalFilename());
+            doc.setFileType(file.getContentType());
+            doc.setFileData(file.getBytes());
+            ApplicantDocument saved = documentRepository.save(doc);
+            return ResponseEntity.ok(Map.of("id", saved.getId(), "fileName", saved.getFileName(), "fileType", saved.getFileType(), "message", "Uploaded"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("message", "Upload failed: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/applicant/document")
+    public ResponseEntity<?> getDocuments(@org.springframework.web.bind.annotation.RequestParam String email) {
+        return applicantRepository.findByEmail(email).map(a ->
+            ResponseEntity.ok(documentRepository.findByApplicantId(a.getId()).stream().map(d -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", d.getId());
+                m.put("fileName", d.getFileName() != null ? d.getFileName() : "");
+                m.put("fileType", d.getFileType() != null ? d.getFileType() : "");
+                return m;
+            }).toList())
+        ).orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/applicant/document/{id}/download")
+    public ResponseEntity<byte[]> downloadDocument(@PathVariable Integer id) {
+        return documentRepository.findById(id).map(d -> {
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentDispositionFormData("attachment", d.getFileName() != null ? d.getFileName() : "document");
+            headers.setContentType(d.getFileType() != null
+                ? org.springframework.http.MediaType.parseMediaType(d.getFileType())
+                : org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);
+            return ResponseEntity.ok().headers(headers).body(d.getFileData());
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/applicant/document/{id}")
+    public ResponseEntity<?> deleteDocument(@PathVariable Integer id) {
+        documentRepository.deleteById(id);
         return ResponseEntity.ok(Map.of("message", "Deleted"));
     }
 }

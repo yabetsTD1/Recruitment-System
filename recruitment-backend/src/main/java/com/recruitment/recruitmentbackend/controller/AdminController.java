@@ -22,6 +22,8 @@ import com.recruitment.recruitmentbackend.repository.RoleRepository;
 import com.recruitment.recruitmentbackend.repository.SalarySettingRepository;
 import com.recruitment.recruitmentbackend.repository.SalaryStepRepository;
 import com.recruitment.recruitmentbackend.repository.UserRepository;
+import com.recruitment.recruitmentbackend.service.ApplicantService;
+import com.recruitment.recruitmentbackend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -50,6 +52,8 @@ public class AdminController {
     private final RegisteredJobRepository registeredJobRepository;
     private final SalarySettingRepository salarySettingRepository;
     private final SalaryStepRepository salaryStepRepository;
+    private final ApplicantService applicantService;
+    private final UserService userService;
 
     // ── Users ──────────────────────────────────────────────────────────────────
 
@@ -144,9 +148,27 @@ public class AdminController {
             // Check if already has a system user account
             boolean hasAccount = userRepository.existsByEmail(a.getEmail() != null ? a.getEmail() : "");
             m.put("hasAccount", hasAccount);
+            // Check if already converted to employee
+            boolean isEmployee = a.getEmail() != null && employeeRepository.existsByEmail(a.getEmail());
+            m.put("isEmployee", isEmployee);
+            if (isEmployee) {
+                employeeRepository.findByEmail(a.getEmail()).ifPresent(emp -> m.put("empCode", emp.getEmployeeId()));
+            }
             return m;
         }).toList();
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/hired-applicants/{applicantId}/convert")
+    public ResponseEntity<?> convertToEmployee(@PathVariable Integer applicantId,
+                                               @RequestBody(required = false) Map<String, Object> body) {
+        try {
+            String tempPassword = body != null ? (String) body.getOrDefault("tempPassword", "") : "";
+            Map<String, Object> result = applicantService.convertToEmployee(applicantId, tempPassword);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     // ── Dashboard Stats ────────────────────────────────────────────────────────
@@ -222,6 +244,15 @@ public class AdminController {
             m.put("department", e.getDepartment() != null ? e.getDepartment() : "");
             m.put("position", e.getPosition() != null ? e.getPosition() : "");
             m.put("phone", e.getPhone() != null ? e.getPhone() : "");
+            m.put("gender", e.getGender() != null ? e.getGender() : "");
+            m.put("title", e.getTitle() != null ? e.getTitle() : "");
+            m.put("location", e.getLocation() != null ? e.getLocation() : "");
+            m.put("nation", e.getNation() != null ? e.getNation() : "");
+            m.put("graduatedFrom", e.getGraduatedFrom() != null ? e.getGraduatedFrom() : "");
+            m.put("gpa", e.getGpa() != null ? e.getGpa() : "");
+            m.put("experienceYears", e.getExperienceYears() != null ? e.getExperienceYears() : "");
+            m.put("githubUrl", e.getGithubUrl() != null ? e.getGithubUrl() : "");
+            m.put("linkedinUrl", e.getLinkedinUrl() != null ? e.getLinkedinUrl() : "");
             m.put("status", e.getStatus().name());
             m.put("contractEndDate", e.getContractEndDate() != null ? e.getContractEndDate().toString() : null);
             return m;

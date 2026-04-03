@@ -9,6 +9,8 @@ export default function InternalVacancyPage() {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(null);
   const [detailItem, setDetailItem] = useState(null);
+  const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     try {
@@ -57,6 +59,23 @@ export default function InternalVacancyPage() {
         <p style={{ color: "#7f8c8d", fontSize: "13px", margin: "4px 0 0 0" }}>Browse and apply to internal job openings</p>
       </div>
 
+      {/* Search bar */}
+      <div style={{ background: "white", borderRadius: "6px", border: "1px solid #ecf0f1", padding: "10px 14px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" style={{ flexShrink: 0 }}>
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input
+          type="text"
+          placeholder="Search by batch code or job title..."
+          value={search}
+          onChange={e => { setSearch(e.target.value); setShowAll(false); }}
+          style={{ border: "none", outline: "none", fontSize: "13px", background: "transparent", flex: 1, color: "#2c3e50" }}
+        />
+        {search && (
+          <button onClick={() => setSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "16px", lineHeight: 1, padding: 0 }}>×</button>
+        )}
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "24px" }}>
         {[
           { label: "Total Vacancies", value: vacancies.length, color: "#2980b9" },
@@ -76,9 +95,24 @@ export default function InternalVacancyPage() {
         <div style={{ background: "white", borderRadius: "8px", padding: "40px", textAlign: "center", color: "#7f8c8d", border: "1px solid #ecf0f1" }}>
           No internal vacancies posted yet.
         </div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
-          {vacancies.map((item) => {
+      ) : (() => {
+          const q = search.toLowerCase().trim();
+          const filtered = vacancies.filter(v =>
+            !q ||
+            (v.batchCode || "").toLowerCase().includes(q) ||
+            (v.jobTitle || "").toLowerCase().includes(q)
+          );
+          // oldest 5 = first 5 (API returns by id asc, oldest first)
+          const visible = (q || showAll) ? filtered : filtered.slice(0, 5);
+          return (
+            <>
+              {filtered.length === 0 ? (
+                <div style={{ background: "white", borderRadius: "8px", padding: "40px", textAlign: "center", color: "#7f8c8d", border: "1px solid #ecf0f1" }}>
+                  No vacancies match your search.
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "16px" }}>
+                  {visible.map((item) => {
             const applied = appliedIds.includes(item.id);
             const isApplying = applying === item.id;
             return (
@@ -134,8 +168,20 @@ export default function InternalVacancyPage() {
               </div>
             );
           })}
-        </div>
-      )}
+                </div>
+              )}
+              {/* Show all / Show less footer */}
+              {!q && filtered.length > 5 && (
+                <div style={{ marginTop: "16px", textAlign: "center" }}>
+                  <button onClick={() => setShowAll(v => !v)}
+                    style={{ background: "none", border: "none", color: "#2980b9", fontWeight: "600", fontSize: "13px", cursor: "pointer" }}>
+                    {showAll ? "▲ Show oldest 5 only" : `▼ Show all ${filtered.length} vacancies`}
+                  </button>
+                </div>
+              )}
+            </>
+          );
+        })()}
 
       {/* Detail Modal */}
       {detailItem && (

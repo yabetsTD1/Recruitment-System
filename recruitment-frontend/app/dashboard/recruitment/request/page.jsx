@@ -305,6 +305,8 @@ export default function RecruitmentRequestPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
   const [editId, setEditId] = useState(null); // id of request being edited
+  const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
   const loadAll = async () => {
     setLoading(true);
@@ -586,6 +588,22 @@ export default function RecruitmentRequestPage() {
           overflow: "hidden",
         }}
       >
+        {/* Search bar */}
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid #ecf0f1", background: "#f8f9fa", display: "flex", alignItems: "center", gap: "10px" }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" style={{ flexShrink: 0 }}>
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input
+            type="text"
+            placeholder="Search by batch code or job title..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ border: "none", outline: "none", fontSize: "13px", background: "transparent", flex: 1, color: "#2c3e50" }}
+          />
+          {search && (
+            <button onClick={() => setSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "16px", lineHeight: 1, padding: 0 }}>×</button>
+          )}
+        </div>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead style={{ background: "#f8f9fa" }}>
             <tr>
@@ -644,7 +662,17 @@ export default function RecruitmentRequestPage() {
                 </td>
               </tr>
             ) : (
-              requests.map((row) => (
+              requests
+                .filter(row => {
+                  const q = search.toLowerCase().trim();
+                  if (!q) return true;
+                  return (
+                    (row.batchCode || "").toLowerCase().includes(q) ||
+                    (row.jobTitle || "").toLowerCase().includes(q)
+                  );
+                })
+                .slice(0, (search.trim() || showAll) ? undefined : 5)
+                .map((row) => (
                 <tr key={row.id} style={{ borderTop: "1px solid #f0f3f4" }}>
                   <td
                     style={{
@@ -739,6 +767,15 @@ export default function RecruitmentRequestPage() {
             )}
           </tbody>
         </table>
+        {/* Show all / Show less footer */}
+        {!loading && requests.length > 5 && !search.trim() && (
+          <div style={{ padding: "10px 16px", borderTop: "1px solid #f0f3f4", textAlign: "center" }}>
+            <button onClick={() => setShowAll(v => !v)}
+              style={{ background: "none", border: "none", color: "#2980b9", fontWeight: "600", fontSize: "13px", cursor: "pointer" }}>
+              {showAll ? "▲ Show recent 5 only" : `▼ Show all ${requests.length} requests`}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Form Modal */}

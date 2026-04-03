@@ -49,6 +49,7 @@ export default function FilterCandidatesPage() {
     gender: "",
     nation: "",
   });
+  const [tableSearch, setTableSearch] = useState("");
 
   useEffect(() => {
     api.get("/recruitments")
@@ -106,6 +107,7 @@ export default function FilterCandidatesPage() {
 
   // Apply inline column filters on top of filteredApps
   const displayed = filteredApps.filter(app => {
+    if (tableSearch.trim() && !(app.applicantName || "").toLowerCase().includes(tableSearch.toLowerCase())) return false;
     if (colFilter.graduatedFrom && !(app.graduatedFrom || "").toLowerCase().includes(colFilter.graduatedFrom.toLowerCase())) return false;
     if (colFilter.gender && !(app.applicantGender || "").toLowerCase().includes(colFilter.gender.toLowerCase())) return false;
     if (colFilter.nation && !(app.nation || "").toLowerCase().includes(colFilter.nation.toLowerCase())) return false;
@@ -239,6 +241,14 @@ export default function FilterCandidatesPage() {
 
       {/* Candidates Table */}
       <div style={{ background: "white", borderRadius: "16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #f3f4f6", overflow: "auto" }}>
+        {/* Name search */}
+        <div style={{ padding: "10px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: "8px", background: "#f8f9fa" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <input type="text" placeholder="Search candidate by name..." value={tableSearch}
+            onChange={e => setTableSearch(e.target.value)}
+            style={{ border: "none", outline: "none", fontSize: "13px", background: "transparent", flex: 1 }} />
+          {tableSearch && <button onClick={() => setTableSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "14px", padding: 0 }}>×</button>}
+        </div>
         {loading ? (
           <div style={{ padding: "40px", textAlign: "center", color: "#6b7280" }}>Loading...</div>
         ) : !selectedRec ? (

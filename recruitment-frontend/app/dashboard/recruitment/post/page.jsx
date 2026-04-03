@@ -15,6 +15,8 @@ export default function RecruitmentPostPage() {
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ postingDate: today(), closingDate: "", passingDays: "", remark: "" });
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
   // Add N working days (Mon-Fri) to a date string, return yyyy-MM-dd
   const addWorkingDays = (startDateStr, days) => {
@@ -98,6 +100,16 @@ export default function RecruitmentPostPage() {
   const posted = data.filter(d => d.status === "POSTED");
   const closed = data.filter(d => d.status === "CLOSED");
 
+  const q = search.toLowerCase().trim();
+  const matchesSearch = (row) => !q ||
+    (row.batchCode || "").toLowerCase().includes(q) ||
+    (row.jobTitle || "").toLowerCase().includes(q);
+
+  const filteredApproved = approved.filter(matchesSearch);
+  const filteredPostedClosed = [...posted, ...closed].filter(matchesSearch);
+  const visibleApproved = (q || showAll) ? filteredApproved : filteredApproved.slice(0, 5);
+  const visiblePostedClosed = (q || showAll) ? filteredPostedClosed : filteredPostedClosed.slice(0, 5);
+
   const inputStyle = {
     width: "100%", padding: "8px 11px", border: "1px solid #d1d5db",
     borderRadius: "4px", fontSize: "13px", outline: "none", boxSizing: "border-box",
@@ -112,6 +124,23 @@ export default function RecruitmentPostPage() {
       <div style={{ marginBottom: "20px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#2c3e50", margin: 0 }}>Recruitment Post</h1>
         <p style={{ color: "#7f8c8d", fontSize: "13px", margin: "4px 0 0 0" }}>Publish approved recruitments as job postings</p>
+      </div>
+
+      {/* Search bar */}
+      <div style={{ background: "white", borderRadius: "6px", border: "1px solid #ecf0f1", padding: "10px 14px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" style={{ flexShrink: 0 }}>
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input
+          type="text"
+          placeholder="Search by batch code or job title..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ border: "none", outline: "none", fontSize: "13px", background: "transparent", flex: 1, color: "#2c3e50" }}
+        />
+        {search && (
+          <button onClick={() => setSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "16px", lineHeight: 1, padding: 0 }}>×</button>
+        )}
       </div>
 
       {/* Stats */}
@@ -137,11 +166,11 @@ export default function RecruitmentPostPage() {
           </div>
           {loading ? (
             <p style={{ padding: "24px", textAlign: "center", color: "#7f8c8d" }}>Loading...</p>
-          ) : approved.length === 0 ? (
+          ) : filteredApproved.length === 0 ? (
             <p style={{ padding: "24px", textAlign: "center", color: "#9ca3af", fontSize: "13px" }}>
-              No approved recruitments. Approve from the Approval page first.
+              {q ? "No matches found." : "No approved recruitments. Approve from the Approval page first."}
             </p>
-          ) : approved.map((row) => (
+          ) : visibleApproved.map((row) => (
             <div key={row.id} onClick={() => handleSelect(row)}
               style={{
                 padding: "12px 16px", cursor: "pointer", borderBottom: "1px solid #f0f3f4",
@@ -164,6 +193,15 @@ export default function RecruitmentPostPage() {
               </div>
             </div>
           ))}
+          {/* Show all / Show less footer */}
+          {!loading && !q && filteredApproved.length > 5 && (
+            <div style={{ padding: "10px 12px", borderTop: "1px solid #f0f3f4", textAlign: "center" }}>
+              <button onClick={() => setShowAll(v => !v)}
+                style={{ background: "none", border: "none", color: "#2980b9", fontWeight: "600", fontSize: "12px", cursor: "pointer" }}>
+                {showAll ? "▲ Show recent 5 only" : `▼ Show all ${filteredApproved.length}`}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Right: post form */}
@@ -289,9 +327,9 @@ export default function RecruitmentPostPage() {
           <tbody>
             {loading ? (
               <tr><td colSpan={7} style={{ padding: "24px", textAlign: "center", color: "#7f8c8d" }}>Loading...</td></tr>
-            ) : [...posted, ...closed].length === 0 ? (
-              <tr><td colSpan={7} style={{ padding: "24px", textAlign: "center", color: "#9ca3af", fontSize: "13px" }}>No records found.</td></tr>
-            ) : [...posted, ...closed].map((row, idx) => {
+            ) : filteredPostedClosed.length === 0 ? (
+              <tr><td colSpan={7} style={{ padding: "24px", textAlign: "center", color: "#9ca3af", fontSize: "13px" }}>{q ? "No matches found." : "No records found."}</td></tr>
+            ) : visiblePostedClosed.map((row, idx) => {
               const expired = row.closingDate && isClosed(row.closingDate);
               return (
                 <tr key={row.id} style={{ borderTop: "1px solid #f0f3f4", opacity: row.status === "CLOSED" ? 0.6 : 1 }}>
@@ -322,6 +360,15 @@ export default function RecruitmentPostPage() {
             })}
           </tbody>
         </table>
+        {/* Show all / Show less footer for posted table */}
+        {!loading && !q && filteredPostedClosed.length > 5 && (
+          <div style={{ padding: "10px 16px", borderTop: "1px solid #f0f3f4", textAlign: "center" }}>
+            <button onClick={() => setShowAll(v => !v)}
+              style={{ background: "none", border: "none", color: "#2980b9", fontWeight: "600", fontSize: "13px", cursor: "pointer" }}>
+              {showAll ? "▲ Show recent 5 only" : `▼ Show all ${filteredPostedClosed.length} records`}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

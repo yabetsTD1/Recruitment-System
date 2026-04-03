@@ -161,12 +161,6 @@ const EMPLOYEE_MENU = [
     href: "/dashboard/internal-vacancy",
   },
   {
-    id: "apply-vacancy",
-    label: "Apply for Vacancy",
-    icon: "✍️",
-    href: "/dashboard/internal-vacancy/apply-vacancy",
-  },
-  {
     id: "my-applications",
     label: "My Applications",
     icon: "📄",

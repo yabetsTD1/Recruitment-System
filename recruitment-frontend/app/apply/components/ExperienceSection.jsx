@@ -63,9 +63,9 @@ export default function ExperienceSection({
       setExperience(updated);
       setSaveMsg(p => ({ ...p, [index]: "success:Saved!" }));
       setTimeout(() => setSaveMsg(p => { const n = { ...p }; delete n[index]; return n; }), 3000);
-      const email = getEmail();
-      if (email) {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/applicant/experience?email=${encodeURIComponent(email)}`)
+      const refreshEmail = getEmail();
+      if (refreshEmail) {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/applicant/experience?email=${encodeURIComponent(refreshEmail)}`)
           .then(r => r.json()).then(d => { if (Array.isArray(d)) setSavedRecords(d); }).catch(() => {});
       }
     } catch { setSaveMsg(p => ({ ...p, [index]: "error:Network error" })); }

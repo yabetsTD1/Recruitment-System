@@ -31,6 +31,7 @@ export default function PersonalInfoSection({
           phoneNumber2: form.phoneNumber2,
           residentialAddress: form.residentialAddress,
           gender: form.gender,
+          title: form.title,
           maritalStatus: form.maritalStatus,
           dateOfBirth: form.dateOfBirth,
           githubUrl: form.githubUrl,

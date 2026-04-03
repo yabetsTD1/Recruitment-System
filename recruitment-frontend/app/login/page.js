@@ -161,7 +161,10 @@ export default function LoginPage() {
           <div style={{ marginTop: "20px", padding: "12px", background: "#f0f8ff", borderRadius: "5px", border: "1px solid #d6eaf8" }}>
             <p style={{ fontSize: "12px", color: "#2980b9", fontWeight: "600", margin: "0 0 4px 0" }}>Default Super Admin</p>
             <p style={{ fontSize: "12px", color: "#5d6d7e", margin: 0 }}>Email: admin@insa.gov.et</p>
-            <p style={{ fontSize: "12px", color: "#5d6d7e", margin: 0 }}>Password: admin123</p>
+            <p style={{ fontSize: "12px", color: "#5d6d7e", margin: "0 0 8px 0" }}>Password: admin123</p>
+            <p style={{ fontSize: "12px", color: "#27ae60", fontWeight: "600", margin: "0 0 4px 0" }}>Converted Employees</p>
+            <p style={{ fontSize: "12px", color: "#5d6d7e", margin: 0 }}>Email: (their registered email)</p>
+            <p style={{ fontSize: "12px", color: "#5d6d7e", margin: 0 }}>Password: Welcome@123</p>
           </div>
         </div>
 

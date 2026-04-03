@@ -14,6 +14,7 @@ export default function FilterCandidatesExamPage() {
   const [error, setError] = useState("");
   const [showCriteriaModal, setShowCriteriaModal] = useState(false);
   const [selectedApps, setSelectedApps] = useState([]);
+  const [tableSearch, setTableSearch] = useState("");
   
   // Filter criteria
   const [filters, setFilters] = useState({
@@ -144,22 +145,30 @@ export default function FilterCandidatesExamPage() {
 
       {/* Recruitment Selector */}
       <div style={{ background: "white", borderRadius: "8px", padding: "16px 20px", marginBottom: "20px", border: "1px solid #ecf0f1", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-        <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#5d6d7e", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Select Recruitment</label>
+        <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#5d6d7e", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Select Recruitment (Batch Code / Job Title)</label>
         <input value={recSearch} onChange={e => setRecSearch(e.target.value)}
           onFocus={() => setDropOpen(true)} onBlur={() => setTimeout(() => setDropOpen(false), 150)}
-          placeholder="Click or type to search recruitments..."
+          placeholder="Search by batch code or job title..."
           style={{ width: "100%", padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "13px", marginBottom: "8px", boxSizing: "border-box" }} />
         {dropOpen && (
           <div style={{ border: "1px solid #d1d5db", borderRadius: "6px", maxHeight: "200px", overflowY: "auto", background: "white" }}>
             {searching ? <p style={{ padding: "12px", color: "#9ca3af", fontSize: "13px", margin: 0 }}>Searching...</p>
-              : recruitments.length === 0 ? <p style={{ padding: "12px", color: "#9ca3af", fontSize: "13px", margin: 0 }}>No results</p>
-              : recruitments.map(r => (
+              : recruitments.filter(r => {
+                  const q = recSearch.toLowerCase().trim();
+                  if (!q) return true;
+                  return (r.batchCode || "").toLowerCase().includes(q) || (r.jobTitle || "").toLowerCase().includes(q);
+                }).length === 0 ? <p style={{ padding: "12px", color: "#9ca3af", fontSize: "13px", margin: 0 }}>No results</p>
+              : recruitments.filter(r => {
+                  const q = recSearch.toLowerCase().trim();
+                  if (!q) return true;
+                  return (r.batchCode || "").toLowerCase().includes(q) || (r.jobTitle || "").toLowerCase().includes(q);
+                }).map(r => (
                 <div key={r.id} onMouseDown={() => selectRec(r)}
                   style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #f3f4f6", fontSize: "13px" }}
                   onMouseEnter={e => e.currentTarget.style.background = "#f0f9ff"}
                   onMouseLeave={e => e.currentTarget.style.background = "white"}>
-                  <span style={{ fontWeight: "600", color: "#2c3e50" }}>{r.jobTitle}</span>
-                  <span style={{ color: "#9ca3af", marginLeft: "8px" }}>{r.department}</span>
+                  <span style={{ fontWeight: "700", color: "#2980b9" }}>{r.batchCode || `#${r.id}`}</span>
+                  <span style={{ fontWeight: "600", color: "#2c3e50", marginLeft: "10px" }}>{r.jobTitle}</span>
                   <span style={{ color: "#9ca3af", marginLeft: "8px", fontSize: "11px" }}>({r.status})</span>
                 </div>
               ))}
@@ -167,8 +176,8 @@ export default function FilterCandidatesExamPage() {
         )}
         {selectedRec && (
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px", padding: "8px 12px", background: "#f0f9ff", borderRadius: "6px", border: "1px solid #bae6fd" }}>
+            <span style={{ fontSize: "12px", fontWeight: "700", color: "#2980b9" }}>{selectedRec.batchCode || `#${selectedRec.id}`}</span>
             <span style={{ fontSize: "13px", fontWeight: "600", color: "#0369a1" }}>{selectedRec.jobTitle}</span>
-            <span style={{ fontSize: "12px", color: "#7f8c8d" }}>{selectedRec.department}</span>
             <button onMouseDown={() => { setSelectedRec(null); setApplications([]); setFilteredApps([]); }}
               style={{ marginLeft: "auto", background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "16px" }}>×</button>
           </div>
@@ -298,6 +307,14 @@ export default function FilterCandidatesExamPage() {
           </div>
 
           <div style={{ background: "white", borderRadius: "16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #f3f4f6", overflow: "hidden" }}>
+            {/* Candidate search */}
+            <div style={{ padding: "10px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: "8px", background: "#f8f9fa" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" placeholder="Search candidate by name..." value={tableSearch}
+                onChange={e => setTableSearch(e.target.value)}
+                style={{ border: "none", outline: "none", fontSize: "13px", background: "transparent", flex: 1 }} />
+              {tableSearch && <button onClick={() => setTableSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "14px", padding: 0 }}>×</button>}
+            </div>
             {loading ? (
               <div style={{ padding: "40px", textAlign: "center", color: "#6b7280" }}>Loading applications...</div>
             ) : filteredApps.length === 0 ? (
@@ -322,7 +339,7 @@ export default function FilterCandidatesExamPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredApps.map(row => (
+                  {filteredApps.filter(row => !tableSearch.trim() || (row.applicantName || "").toLowerCase().includes(tableSearch.toLowerCase())).map(row => (
                     <tr key={row.id} style={{ borderTop: "1px solid #f9fafb", background: selectedApps.includes(row.id) ? "#f0f9ff" : "white" }}>
                       <td style={{ padding: "14px 20px" }}>
                         <input 

@@ -19,9 +19,11 @@ export default function UsersPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState("users"); // users | hired
+  const [activeRoleGroup, setActiveRoleGroup] = useState(null); // SUPER_ADMIN | ADMIN | EMPLOYEE
   const [roleModal, setRoleModal] = useState(null); // { id, currentRole }
   const [newRole, setNewRole] = useState("EMPLOYEE");
   const [roleChanging, setRoleChanging] = useState(false);
+  const [converting, setConverting] = useState(null); // applicantId being converted
 
   useEffect(() => { loadUsers(); loadHiredApplicants(); }, []);
 
@@ -82,8 +84,19 @@ export default function UsersPage() {
     } finally { setRoleChanging(false); }
   };
 
+  const handleConvert = async (applicantId, applicantName, email) => {
+    if (!confirm(`Convert "${applicantName}" to an employee?\n\nA system account will be created:\n  Email: ${email}\n  Password: Welcome@123\n\nThey can log in at /login with these credentials.`)) return;
+    setConverting(applicantId);
+    try {
+      await api.post(`/admin/hired-applicants/${applicantId}/convert`, { tempPassword: "Welcome@123" });
+      loadHiredApplicants();
+      loadUsers();
+    } catch (e) {
+      alert(e.response?.data?.message || "Failed to convert.");
+    } finally { setConverting(null); }
+  };
+
   const filtered = users.filter(u => {
-    if (!isSuperAdmin && u.role === "EMPLOYEE") return false;
     return (
       u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
       u.email?.toLowerCase().includes(search.toLowerCase()) ||
@@ -91,11 +104,13 @@ export default function UsersPage() {
     );
   });
 
-  const filteredHired = hiredApplicants.filter(a =>
-    a.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-    a.email?.toLowerCase().includes(search.toLowerCase()) ||
-    a.jobTitle?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredHired = hiredApplicants
+    .filter(a => !a.isEmployee) // hide already-converted
+    .filter(a =>
+      a.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+      a.email?.toLowerCase().includes(search.toLowerCase()) ||
+      a.jobTitle?.toLowerCase().includes(search.toLowerCase())
+    );
 
   const roleColor = (role) => {
     if (role === "SUPER_ADMIN") return { bg: "#f3e8ff", color: "#7c3aed" };
@@ -122,7 +137,7 @@ export default function UsersPage() {
       <div style={{ display: "flex", gap: "4px", marginBottom: "16px", borderBottom: "2px solid #e5e7eb" }}>
         {[
           { id: "users", label: `System Users (${users.length})` },
-          { id: "hired", label: `Hired Applicants (${hiredApplicants.length})` },
+          { id: "hired", label: `Hired Applicants (${hiredApplicants.filter(a => !a.isEmployee).length})` },
         ].map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             style={{
@@ -151,62 +166,108 @@ export default function UsersPage() {
         {activeTab === "users" && (
           loading ? (
             <div style={{ padding: "40px", textAlign: "center", color: "#7f8c8d" }}>Loading...</div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#f0f3f4" }}>
-                    {["Full Name", "Username", "Email", "Role", "Status", "Created", "Actions"].map(h => (
-                      <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#5d6d7e", borderBottom: "1px solid #dce1e7", whiteSpace: "nowrap" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.length === 0 ? (
-                    <tr><td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "#7f8c8d", fontSize: "14px" }}>No users found.</td></tr>
-                  ) : filtered.map((u) => {
-                    const rc = roleColor(u.role);
+          ) : (() => {
+            const groups = [
+              { role: "SUPER_ADMIN", label: "Super Admin", badge: { bg: "#f3e8ff", color: "#7c3aed" }, border: "#c4b5fd", cardBg: "#7c3aed" },
+              { role: "ADMIN",       label: "Admin",       badge: { bg: "#dbeafe", color: "#1d4ed8" }, border: "#93c5fd", cardBg: "#1d4ed8" },
+              { role: "EMPLOYEE",    label: "Employee",    badge: { bg: "#dcfce7", color: "#15803d" }, border: "#86efac", cardBg: "#15803d" },
+            ];
+            const activeGroup = groups.find(g => g.role === activeRoleGroup);
+            const activeGroupUsers = activeGroup ? filtered.filter(u => u.role === activeGroup.role) : [];
+            return (
+              <div style={{ padding: "16px" }}>
+                {/* Clickable summary cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px", marginBottom: "20px" }}>
+                  {groups.map(g => {
+                    const count = filtered.filter(u => u.role === g.role).length;
+                    const isActive = activeRoleGroup === g.role;
                     return (
-                      <tr key={u.id} style={{ borderBottom: "1px solid #f0f3f4" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "#f8f9fa"}
-                        onMouseLeave={e => e.currentTarget.style.background = "white"}>
-                        <td style={{ padding: "10px 16px", fontSize: "13px", fontWeight: "600", color: "#2c3e50" }}>{u.fullName}</td>
-                        <td style={{ padding: "10px 16px", fontSize: "13px", color: "#5d6d7e" }}>{u.username}</td>
-                        <td style={{ padding: "10px 16px", fontSize: "13px", color: "#5d6d7e" }}>{u.email}</td>
-                        <td style={{ padding: "10px 16px" }}>
-                          <span style={{ background: rc.bg, color: rc.color, padding: "2px 10px", borderRadius: "10px", fontSize: "11px", fontWeight: "700" }}>{u.role}</span>
-                        </td>
-                        <td style={{ padding: "10px 16px" }}>
-                          <span style={{ background: u.status === "ACTIVE" ? "#dcfce7" : "#fee2e2", color: u.status === "ACTIVE" ? "#15803d" : "#b91c1c", padding: "2px 10px", borderRadius: "10px", fontSize: "11px", fontWeight: "700" }}>{u.status}</span>
-                        </td>
-                        <td style={{ padding: "10px 16px", fontSize: "12px", color: "#7f8c8d" }}>{u.createdAt ? u.createdAt.split("T")[0] : "-"}</td>
-                        <td style={{ padding: "10px 16px" }}>
-                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                            {isSuperAdmin && u.role !== "SUPER_ADMIN" && (
-                              <button onClick={() => openRoleModal(u)}
-                                style={{ padding: "4px 10px", background: "#ede9fe", color: "#7c3aed", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px", fontWeight: "600" }}>
-                                Change Role
-                              </button>
-                            )}
-                            <button onClick={() => toggleUser(u.id)}
-                              style={{ padding: "4px 10px", background: u.status === "ACTIVE" ? "#fef3c7" : "#dcfce7", color: u.status === "ACTIVE" ? "#92400e" : "#15803d", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px", fontWeight: "600" }}>
-                              {u.status === "ACTIVE" ? "Disable" : "Enable"}
-                            </button>
-                            {u.role !== "SUPER_ADMIN" && (
-                              <button onClick={() => deleteUser(u.id)}
-                                style={{ padding: "4px 10px", background: "#fee2e2", color: "#b91c1c", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px", fontWeight: "600" }}>
-                                Delete
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
+                      <div key={g.role}
+                        onClick={() => setActiveRoleGroup(isActive ? null : g.role)}
+                        style={{
+                          background: isActive ? g.cardBg : "white",
+                          borderRadius: "8px", padding: "16px 20px", cursor: "pointer",
+                          boxShadow: isActive ? "0 4px 12px rgba(0,0,0,0.15)" : "0 1px 4px rgba(0,0,0,0.08)",
+                          border: `2px solid ${isActive ? g.cardBg : g.border}`,
+                          transition: "all 0.2s",
+                          color: isActive ? "white" : g.badge.color,
+                        }}>
+                        <p style={{ fontSize: "32px", fontWeight: "700", margin: "0 0 4px 0" }}>{count}</p>
+                        <p style={{ fontSize: "13px", margin: 0, opacity: 0.9 }}>{g.label}{count !== 1 ? "s" : ""}</p>
+                        <p style={{ fontSize: "11px", margin: "6px 0 0 0", opacity: 0.7 }}>
+                          {isActive ? "▲ Hide" : "▼ View"}
+                        </p>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
-          )
+                </div>
+
+                {/* Selected group table */}
+                {activeGroup && (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px", paddingBottom: "6px", borderBottom: `2px solid ${activeGroup.border}` }}>
+                      <span style={{ background: activeGroup.badge.bg, color: activeGroup.badge.color, padding: "3px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: "700" }}>
+                        {activeGroup.label}
+                      </span>
+                      <span style={{ fontSize: "12px", color: "#9ca3af" }}>{activeGroupUsers.length} user{activeGroupUsers.length !== 1 ? "s" : ""}</span>
+                    </div>
+                    {activeGroupUsers.length === 0 ? (
+                      <p style={{ fontSize: "13px", color: "#9ca3af", margin: "8px 0 0 4px" }}>No {activeGroup.label.toLowerCase()} users.</p>
+                    ) : (
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                          <thead>
+                            <tr style={{ background: "#f8f9fa" }}>
+                              {["Full Name", "Username", "Email", "Status", "Created", ...(isSuperAdmin ? ["Actions"] : [])].map(h => (
+                                <th key={h} style={{ padding: "8px 14px", textAlign: "left", fontSize: "11px", fontWeight: "600", color: "#5d6d7e", borderBottom: "1px solid #e5e7eb", whiteSpace: "nowrap" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {activeGroupUsers.map(u => (
+                              <tr key={u.id} style={{ borderBottom: "1px solid #f0f3f4" }}
+                                onMouseEnter={e => e.currentTarget.style.background = "#f8f9fa"}
+                                onMouseLeave={e => e.currentTarget.style.background = "white"}>
+                                <td style={{ padding: "9px 14px", fontSize: "13px", fontWeight: "600", color: "#2c3e50" }}>{u.fullName}</td>
+                                <td style={{ padding: "9px 14px", fontSize: "13px", color: "#5d6d7e" }}>{u.username}</td>
+                                <td style={{ padding: "9px 14px", fontSize: "13px", color: "#5d6d7e" }}>{u.email}</td>
+                                <td style={{ padding: "9px 14px" }}>
+                                  <span style={{ background: u.status === "ACTIVE" ? "#dcfce7" : "#fee2e2", color: u.status === "ACTIVE" ? "#15803d" : "#b91c1c", padding: "2px 10px", borderRadius: "10px", fontSize: "11px", fontWeight: "700" }}>{u.status}</span>
+                                </td>
+                                <td style={{ padding: "9px 14px", fontSize: "12px", color: "#7f8c8d" }}>{u.createdAt ? u.createdAt.split("T")[0] : "-"}</td>
+                                {isSuperAdmin && (
+                                  <td style={{ padding: "9px 14px" }}>
+                                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                                      {u.role !== "SUPER_ADMIN" && (
+                                        <button onClick={() => openRoleModal(u)}
+                                          style={{ padding: "4px 10px", background: "#ede9fe", color: "#7c3aed", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px", fontWeight: "600" }}>
+                                          Change Role
+                                        </button>
+                                      )}
+                                      <button onClick={() => toggleUser(u.id)}
+                                        style={{ padding: "4px 10px", background: u.status === "ACTIVE" ? "#fef3c7" : "#dcfce7", color: u.status === "ACTIVE" ? "#92400e" : "#15803d", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px", fontWeight: "600" }}>
+                                        {u.status === "ACTIVE" ? "Disable" : "Enable"}
+                                      </button>
+                                      {u.role !== "SUPER_ADMIN" && (
+                                        <button onClick={() => deleteUser(u.id)}
+                                          style={{ padding: "4px 10px", background: "#fee2e2", color: "#b91c1c", border: "none", borderRadius: "4px", cursor: "pointer", fontSize: "11px", fontWeight: "600" }}>
+                                          Delete
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                )}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()
         )}
 
         {/* Hired Applicants Tab */}
@@ -215,14 +276,14 @@ export default function UsersPage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f0f3f4" }}>
-                  {["Full Name", "Email", "Phone", "Position", "Hired Date", "Account Status"].map(h => (
+                  {["Full Name", "Email", "Phone", "Position", "Hired Date", "Employee Status", "Actions"].map(h => (
                     <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#5d6d7e", borderBottom: "1px solid #dce1e7", whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filteredHired.length === 0 ? (
-                  <tr><td colSpan={6} style={{ padding: "32px", textAlign: "center", color: "#7f8c8d", fontSize: "14px" }}>No hired applicants found.</td></tr>
+                  <tr><td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "#7f8c8d", fontSize: "14px" }}>No hired applicants found.</td></tr>
                 ) : filteredHired.map((a, i) => (
                   <tr key={i} style={{ borderBottom: "1px solid #f0f3f4" }}
                     onMouseEnter={e => e.currentTarget.style.background = "#f8f9fa"}
@@ -234,12 +295,30 @@ export default function UsersPage() {
                     <td style={{ padding: "10px 16px", fontSize: "12px", color: "#7f8c8d" }}>{a.appliedAt || "—"}</td>
                     <td style={{ padding: "10px 16px" }}>
                       <span style={{
-                        background: a.hasAccount ? "#dcfce7" : "#fef3c7",
-                        color: a.hasAccount ? "#15803d" : "#92400e",
+                        background: a.isEmployee ? "#dcfce7" : (a.hasAccount ? "#dbeafe" : "#fef3c7"),
+                        color: a.isEmployee ? "#15803d" : (a.hasAccount ? "#1d4ed8" : "#92400e"),
                         padding: "2px 10px", borderRadius: "10px", fontSize: "11px", fontWeight: "700"
                       }}>
-                        {a.hasAccount ? "Has Account" : "No Account"}
+                        {a.isEmployee ? "Employee" : (a.hasAccount ? "Has Account" : "Not Converted")}
                       </span>
+                    </td>
+                    <td style={{ padding: "10px 16px" }}>
+                      {!a.isEmployee && isSuperAdmin && (
+                        <button
+                          onClick={() => handleConvert(a.applicantId, a.fullName, a.email)}
+                          disabled={converting === a.applicantId}
+                          style={{
+                            padding: "4px 12px", background: converting === a.applicantId ? "#e5e7eb" : "#dcfce7",
+                            color: converting === a.applicantId ? "#9ca3af" : "#15803d",
+                            border: "1px solid #bbf7d0", borderRadius: "4px", cursor: converting === a.applicantId ? "not-allowed" : "pointer",
+                            fontSize: "11px", fontWeight: "600", whiteSpace: "nowrap"
+                          }}>
+                          {converting === a.applicantId ? "Converting..." : "Convert to Employee"}
+                        </button>
+                      )}
+                      {a.isEmployee && (
+                        <span style={{ fontSize: "12px", color: "#15803d", fontWeight: "600" }}>✓ {a.empCode || "Converted"}</span>
+                      )}
                     </td>
                   </tr>
                 ))}

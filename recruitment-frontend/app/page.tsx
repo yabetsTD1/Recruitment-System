@@ -49,14 +49,7 @@ export default function Home() {
         <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {/* Logo */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <svg width="34" height="38" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M50 4 L10 22 L10 62 Q10 88 50 102 Q90 88 90 62 L90 22 Z" fill="none" stroke="url(#ng)" strokeWidth="5" strokeLinejoin="round"/>
-              <defs><linearGradient id="ng" x1="10" y1="0" x2="90" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#c0392b"/><stop offset="50%" stopColor="#8e44ad"/><stop offset="100%" stopColor="#2980b9"/></linearGradient></defs>
-              <rect x="47" y="54" width="6" height="28" rx="2" fill="#7f8c8d"/>
-              <circle cx="50" cy="40" r="18" fill="none" stroke="#c0392b" strokeWidth="5"/>
-              <circle cx="50" cy="40" r="12" fill="white"/>
-              <circle cx="50" cy="40" r="8" fill="#4a4a7a"/>
-            </svg>
+            <img src="/logo.png" alt="INSA Logo" style={{ height: "38px", width: "38px", objectFit: "contain" }} />
             <span style={{ color: "white", fontWeight: "700", fontSize: "16px", letterSpacing: "0.5px" }}>INSA-ERP</span>
           </div>
 
@@ -86,11 +79,16 @@ export default function Home() {
 
       {/* Hero */}
       <section style={{
-        background: "linear-gradient(135deg, #2c3e50 0%, #1a252f 60%, #2980b9 100%)",
+        backgroundImage: "url('/insa background.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
         paddingTop: "120px", paddingBottom: "80px",
         textAlign: "center",
+        position: "relative",
       }}>
-        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 24px" }}>
+        <div style={{ position: "absolute", inset: 0, background: "rgba(26,37,47,0.35)" }} />
+        <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 24px", position: "relative", zIndex: 1 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "rgba(41,128,185,0.3)", border: "1px solid rgba(41,128,185,0.5)", borderRadius: "20px", padding: "6px 16px", marginBottom: "24px" }}>
             <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#1abc9c", display: "inline-block" }}></span>
             <span style={{ color: "rgba(255,255,255,0.85)", fontSize: "13px" }}>
@@ -265,13 +263,7 @@ export default function Home() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "32px", marginBottom: "32px" }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                <svg width="28" height="30" viewBox="0 0 100 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M50 4 L10 22 L10 62 Q10 88 50 102 Q90 88 90 62 L90 22 Z" fill="none" stroke="url(#fg)" strokeWidth="6" strokeLinejoin="round"/>
-                  <defs><linearGradient id="fg" x1="10" y1="0" x2="90" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stopColor="#c0392b"/><stop offset="100%" stopColor="#2980b9"/></linearGradient></defs>
-                  <circle cx="50" cy="40" r="14" fill="none" stroke="#c0392b" strokeWidth="4"/>
-                  <circle cx="50" cy="40" r="7" fill="#4a4a7a"/>
-                  <rect x="47" y="52" width="6" height="22" rx="2" fill="#7f8c8d"/>
-                </svg>
+                <img src="/logo.png" alt="INSA Logo" style={{ height: "30px", width: "30px", objectFit: "contain" }} />
                 <span style={{ fontWeight: "700", fontSize: "15px" }}>INSA-ERP</span>
               </div>
               <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "13px", lineHeight: 1.6, margin: 0 }}>

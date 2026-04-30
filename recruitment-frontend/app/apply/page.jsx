@@ -52,21 +52,10 @@ function ApplyForm({ jobIdOverride }) {
     phoneNumber1: "", phoneNumber2: "", githubUrl: "", linkedinUrl: "",
   });
 
-  const [education, setEducation] = useState([
-    { institution: "", fieldOfStudy: "", educationLevel: "", startDate: "", endDate: "", paidBy: "", location: "" }
-  ]);
-
-  const [certifications, setCertifications] = useState([
-    { professionalLicense: "", startDate: "", institution: "", skills: "", endDate: "", location: "" }
-  ]);
-
-  const [experience, setExperience] = useState([
-    { jobTitle: "", institution: "", organizationType: "", startDate: "", terminationReason: "", employmentType: "", responsibility: "", salary: "", endDate: "" }
-  ]);
-
-  const [languages, setLanguages] = useState([
-    { language: "", writing: "", listening: "", reading: "", speaking: "" }
-  ]);
+  const [education, setEducation] = useState([]);
+  const [certifications, setCertifications] = useState([]);
+  const [experience, setExperience] = useState([]);
+  const [languages, setLanguages] = useState([]);
 
   const [documents, setDocuments] = useState([]);
 

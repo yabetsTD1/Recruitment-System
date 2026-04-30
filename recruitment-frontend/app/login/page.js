@@ -32,7 +32,10 @@ export default function LoginPage() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(135deg, #2c3e50 0%, #1a252f 60%, #2980b9 100%)",
+      backgroundImage: "url('/insa background.png')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -43,17 +46,8 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "32px" }}>
-          <div style={{
-            width: "64px", height: "64px",
-            background: "linear-gradient(135deg, #2980b9, #1abc9c)",
-            borderRadius: "50%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 14px",
-          }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="white" strokeWidth="1.5" fill="rgba(255,255,255,0.2)" />
-              <circle cx="12" cy="12" r="3" fill="white" />
-            </svg>
+          <div style={{ margin: "0 auto 14px", width: "80px", height: "80px" }}>
+            <img src="/logo.png" alt="INSA Logo" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
           </div>
           <h1 style={{ color: "white", fontSize: "22px", fontWeight: "700", margin: 0, letterSpacing: "0.5px" }}>INSA-ERP</h1>
           <p style={{ color: "rgba(255,255,255,0.55)", fontSize: "13px", margin: "4px 0 0 0" }}>Recruitment Management System</p>

@@ -190,6 +190,12 @@ export default function ExperienceSection({
             </button>
           </div>
 
+          {experience.length === 0 && (
+            <div style={{ textAlign: "center", padding: "28px", background: "#f8fafc", borderRadius: "10px", border: "2px dashed #e2e8f0", marginBottom: "16px", color: "#94a3b8", fontSize: "14px" }}>
+              No new experience entries. Click <strong>Add Experience</strong> to add one.
+            </div>
+          )}
+
           {experience.map((exp, index) => (
             <div key={index} className="entry-card" style={{
               background: "linear-gradient(to bottom, #ffffff, #f8fafc)",
@@ -218,7 +224,7 @@ export default function ExperienceSection({
                   </svg>
                   Entry {index + 1}
                 </div>
-                {experience.length > 1 && (
+                {experience.length > 0 && (
                   <button
                     type="button"
                     onClick={() => removeExperience(index)}
@@ -321,60 +327,22 @@ export default function ExperienceSection({
               </div>
             </div>
           ))}
-
-          {/* Navigation Buttons */}
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "28px" }}>
-            <button
-              type="button"
-              onClick={goToPreviousStep}
-              style={{
-                padding: "12px 32px",
-                background: "linear-gradient(135deg, #64748b, #475569)",
-                color: "white",
-                border: "none",
-                borderRadius: "10px",
-                cursor: "pointer",
-                fontSize: "15px",
-                fontWeight: "600",
-                transition: "all 0.3s ease",
-                boxShadow: "0 4px 12px rgba(100, 116, 139, 0.3)",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
-              </svg>
-              Previous
-            </button>
-            <button
-              type="button"
-              onClick={goToNextStep}
-              style={{
-                padding: "12px 32px",
-                background: "linear-gradient(135deg, #10b981, #059669)",
-                color: "white",
-                border: "none",
-                borderRadius: "10px",
-                cursor: "pointer",
-                fontSize: "15px",
-                fontWeight: "600",
-                transition: "all 0.3s ease",
-                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
-              }}
-            >
-              Next Section
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
-            </button>
-          </div>
         </div>
       )}
+
+      {/* Navigation Buttons - Always Visible */}
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px", padding: "0 24px 24px" }}>
+        <button type="button" onClick={goToPreviousStep}
+          style={{ padding: "12px 32px", background: "linear-gradient(135deg, #64748b, #475569)", color: "white", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "15px", fontWeight: "600", boxShadow: "0 4px 12px rgba(100, 116, 139, 0.3)", display: "flex", alignItems: "center", gap: "8px" }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Previous
+        </button>
+        <button type="button" onClick={goToNextStep}
+          style={{ padding: "12px 32px", background: "linear-gradient(135deg, #10b981, #059669)", color: "white", border: "none", borderRadius: "10px", cursor: "pointer", fontSize: "15px", fontWeight: "600", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)", display: "flex", alignItems: "center", gap: "8px" }}>
+          Next Section
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
     </div>
   );
 }

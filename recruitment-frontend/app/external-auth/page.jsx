@@ -96,13 +96,17 @@ function ExternalAuthForm() {
 
   return (
     <div style={{
-      minHeight: "100vh", background: "#f0f2f5",
+      minHeight: "100vh",
+      backgroundImage: "url('/insa background.png')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
       display: "flex", alignItems: "center", justifyContent: "center",
       fontFamily: "'Segoe UI', Arial, sans-serif", padding: "20px",
     }}>
       <div style={{
-        background: "white", borderRadius: "16px", width: "100%", maxWidth: "420px",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.12)", overflow: "hidden",
+        background: "white", borderRadius: "16px", width: "100%", maxWidth: "520px",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.25)", overflow: "hidden",
       }}>
 
         {/* Logo Section */}
@@ -188,15 +192,15 @@ function ExternalAuthForm() {
             <form onSubmit={handleRegister}>
               <div style={{ marginBottom: "16px" }}>
                 <label style={lbl}>Full Name <span style={{ color: "#e63946" }}>*</span></label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
                   {[
-                    { key: "firstName", ph: "First", req: true },
-                    { key: "middleName", ph: "Middle", req: false },
-                    { key: "lastName", ph: "Last", req: true },
+                    { key: "firstName", ph: "First Name", req: true },
+                    { key: "middleName", ph: "Middle Name", req: false },
+                    { key: "lastName", ph: "Last Name", req: true },
                   ].map(f => (
                     <div key={f.key}>
-                      <div style={{ ...fieldStyle, padding: "10px 12px" }}>
-                        <input style={{ ...inputBase, fontSize: "13px" }} placeholder={f.ph}
+                      <div style={fieldStyle}>
+                        <input style={inputBase} placeholder={f.ph}
                           value={reg[f.key]} onChange={e => setR(f.key, e.target.value)} />
                       </div>
                       <p style={{ fontSize: "11px", color: "#9e9e9e", margin: "3px 0 0 2px" }}>{f.ph}{f.req ? " *" : ""}</p>

@@ -44,10 +44,16 @@ export default function JobDetailPage() {
   if (!job) {
     return (
       <div style={{ minHeight: "100vh", background: "#f8f9fa", fontFamily: "'Segoe UI', sans-serif" }}>
-        <div style={{ background: "#2c3e50", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ color: "white", fontWeight: "700", fontSize: "16px" }}>INSA Recruitment</span>
-          <Link href="/jobs" style={{ color: "rgba(255,255,255,0.7)", fontSize: "13px", textDecoration: "none" }}>← Back to Jobs</Link>
-        </div>
+      <div style={{
+        backgroundImage: "url('/insa background.png')",
+        backgroundSize: "cover", backgroundPosition: "center",
+        padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center",
+        position: "relative",
+      }}>
+        <div style={{ position: "absolute", inset: 0, background: "rgba(44,62,80,0.82)" }} />
+        <span style={{ color: "white", fontWeight: "700", fontSize: "16px", position: "relative", zIndex: 1 }}>INSA Recruitment</span>
+        <Link href="/jobs" style={{ color: "rgba(255,255,255,0.7)", fontSize: "13px", textDecoration: "none", position: "relative", zIndex: 1 }}>← Back to Jobs</Link>
+      </div>
         <div style={{ maxWidth: "800px", margin: "80px auto", padding: "0 20px", textAlign: "center" }}>
           <div style={{ fontSize: "56px", marginBottom: "16px" }}>❌</div>
           <h1 style={{ fontSize: "22px", color: "#2c3e50", marginBottom: "12px" }}>Job Not Found</h1>
@@ -63,12 +69,21 @@ export default function JobDetailPage() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8f9fa", fontFamily: "'Segoe UI', sans-serif" }}>
       {/* Header */}
-      <div style={{ background: "#2c3e50", padding: "16px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <div style={{
+        backgroundImage: "url('/insa background.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        padding: "16px 32px",
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        position: "relative",
+      }}>
+        <div style={{ position: "absolute", inset: 0, background: "rgba(44,62,80,0.82)" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", position: "relative", zIndex: 1 }}>
           <div style={{ width: "32px", height: "32px", background: "#2980b9", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>🛡️</div>
           <span style={{ color: "white", fontWeight: "700", fontSize: "15px" }}>INSA Recruitment</span>
         </div>
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center", position: "relative", zIndex: 1 }}>
           <Link href="/jobs" style={{ color: "rgba(255,255,255,0.7)", fontSize: "13px", textDecoration: "none" }}>← All Jobs</Link>
           <Link href="/login" style={{ padding: "7px 16px", background: "#27ae60", color: "white", borderRadius: "5px", textDecoration: "none", fontWeight: "600", fontSize: "13px" }}>Staff Login</Link>
         </div>
@@ -90,10 +105,6 @@ export default function JobDetailPage() {
                 {job.employmentType && <span style={{ fontSize: "13px", color: "#6b7280" }}>📄 {job.employmentType}</span>}
               </div>
             </div>
-            <button onClick={handleApply}
-              style={{ padding: "12px 28px", background: "linear-gradient(135deg, #27ae60, #229954)", color: "white", border: "none", borderRadius: "8px", fontWeight: "700", fontSize: "15px", cursor: "pointer", boxShadow: "0 4px 12px rgba(39,174,96,0.3)", whiteSpace: "nowrap" }}>
-              Apply Now →
-            </button>
           </div>
         </div>
 

@@ -33,7 +33,6 @@ const SUPER_ADMIN_MENU = [
     href: "/dashboard/org-profile",
   },
 ];
-
 const ADMIN_MENU = [
   { id: "dashboard", label: "Dashboard", icon: "⊞", href: "/dashboard" },
   {

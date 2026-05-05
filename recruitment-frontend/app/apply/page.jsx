@@ -49,7 +49,7 @@ function ApplyForm({ jobIdOverride }) {
   const [form, setForm] = useState({
     firstName: "", middleName: "", lastName: "", title: "", dateOfBirth: "",
     residentialAddress: "", email: "", gender: "", maritalStatus: "",
-    phoneNumber1: "", phoneNumber2: "", githubUrl: "", linkedinUrl: "",
+    phoneNumber1: "", phoneNumber2: "", githubUrl: "", linkedinUrl: "", nation: "",
   });
 
   const [education, setEducation] = useState([]);
@@ -123,6 +123,7 @@ function ApplyForm({ jobIdOverride }) {
             dateOfBirth: profile.dateOfBirth || "",
             githubUrl: profile.githubUrl || "",
             linkedinUrl: profile.linkedinUrl || "",
+            nation: profile.nation || "",
           }));
         }
       })

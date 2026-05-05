@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";
 
+const ICF_OPTIONS = Array.from({ length: 15 }, (_, i) => String(i + 1));
 const CLASS_OPTIONS = [
   "A",
   "B",
@@ -25,7 +26,7 @@ const CLASS_OPTIONS = [
   "S",
   "T",
 ];
-const EMPTY = { jobTypeId: "", classCode: "" };
+const EMPTY = { jobTypeId: "", classCode: "", icf: "" };
 
 const inp = {
   width: "100%",
@@ -50,6 +51,9 @@ export default function RegisterJobsPage() {
   const [filterJobType, setFilterJobType] = useState("");
   const [filterClass, setFilterClass] = useState("");
   const [msg, setMsg] = useState(null);
+  const [jobTypeSearch, setJobTypeSearch] = useState("");
+  const [showJobTypeDropdown, setShowJobTypeDropdown] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -94,6 +98,13 @@ export default function RegisterJobsPage() {
     fetchAll();
   }, []);
 
+  // Close job type dropdown on outside click
+  useEffect(() => {
+    const handler = () => setShowJobTypeDropdown(false);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
   // When job type selected, auto-set name = job type name
@@ -104,14 +115,20 @@ export default function RegisterJobsPage() {
   const openAdd = () => {
     setEditItem(null);
     setForm(EMPTY);
+    setJobTypeSearch("");
+    setShowJobTypeDropdown(false);
     setShowModal(true);
   };
   const openEdit = (item) => {
     setEditItem(item);
+    const jt = jobTypes.find(t => String(t.id) === String(item.jobTypeId));
     setForm({
       jobTypeId: item.jobTypeId ? String(item.jobTypeId) : "",
       classCode: item.classCode || "",
+      icf: item.icf || "",
     });
+    setJobTypeSearch(jt?.name || "");
+    setShowJobTypeDropdown(false);
     setShowModal(true);
   };
 
@@ -133,6 +150,7 @@ export default function RegisterJobsPage() {
         name: jt?.name || "",
         jobTypeId: form.jobTypeId,
         classCode: form.classCode,
+        icf: form.icf || "",
       };
       if (editItem) {
         await api.put(`/admin/registered-jobs/${editItem.id}`, payload);
@@ -191,6 +209,8 @@ export default function RegisterJobsPage() {
       (!filterJobType || String(j.jobTypeId) === String(filterJobType)) &&
       (!filterClass || j.classCode === filterClass),
   );
+  const displayedJobs = showAll ? filtered : filtered.slice(-5).reverse();
+  const hasMore = filtered.length > 5;
 
   return (
     <div style={{ fontFamily: "sans-serif", color: "#2c3e50" }}>
@@ -429,6 +449,7 @@ export default function RegisterJobsPage() {
               : "No jobs match your filters."}
           </div>
         ) : (
+          <>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead
               style={{
@@ -436,7 +457,7 @@ export default function RegisterJobsPage() {
               }}
             >
               <tr>
-                {["#", "Job", "Class", "Actions"].map((h) => (
+                {["#", "Job", "Class", "ICF", "Actions"].map((h) => (
                   <th
                     key={h}
                     style={{
@@ -454,7 +475,7 @@ export default function RegisterJobsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((item, idx) => (
+              {displayedJobs.map((item, idx) => (
                 <tr
                   key={item.id}
                   style={{ borderBottom: "1px solid #f9fafb" }}
@@ -497,6 +518,13 @@ export default function RegisterJobsPage() {
                     >
                       {item.classCode || "—"}
                     </span>
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    {item.icf ? (
+                      <span style={{ background: "#e0f2fe", color: "#0369a1", padding: "3px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: "700" }}>
+                        ICF {item.icf}
+                      </span>
+                    ) : <span style={{ color: "#9ca3af", fontSize: "12px" }}>—</span>}
                   </td>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ display: "flex", gap: "6px" }}>
@@ -551,6 +579,17 @@ export default function RegisterJobsPage() {
               ))}
             </tbody>
           </table>
+          {hasMore && (
+            <div style={{ padding: "12px 16px", borderTop: "1px solid #f1f5f9", textAlign: "center" }}>
+              <button
+                onClick={() => setShowAll(!showAll)}
+                style={{ padding: "7px 20px", background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600", color: "#374151" }}
+              >
+                {showAll ? `Show Recent 5 ▲` : `Show All ${filtered.length} Records ▼`}
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
 
@@ -623,19 +662,39 @@ export default function RegisterJobsPage() {
                 >
                   Job <span style={{ color: "#e74c3c" }}>*</span>
                 </label>
-                <select
-                  required
-                  value={form.jobTypeId}
-                  onChange={(e) => handleJobTypeChange(e.target.value)}
-                  style={inp}
-                >
-                  <option value="">-- Select Job --</option>
-                  {jobTypes.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="text"
+                    placeholder="Search job type..."
+                    value={jobTypeSearch}
+                    onChange={e => { setJobTypeSearch(e.target.value); setShowJobTypeDropdown(true); set("jobTypeId", ""); }}
+                    onFocus={() => setShowJobTypeDropdown(true)}
+                    style={{ ...inp, paddingRight: "32px" }}
+                    autoComplete="off"
+                  />
+                  <span style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none" }}>▾</span>
+                  {showJobTypeDropdown && (
+                    <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "white", border: "1px solid #d1d5db", borderRadius: "6px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 100, maxHeight: "200px", overflowY: "auto" }}>
+                      {jobTypes
+                        .filter(t => t.name.toLowerCase().includes(jobTypeSearch.toLowerCase()))
+                        .map(t => (
+                          <div key={t.id}
+                            onClick={() => { set("jobTypeId", String(t.id)); setJobTypeSearch(t.name); setShowJobTypeDropdown(false); }}
+                            style={{ padding: "9px 12px", fontSize: "13px", cursor: "pointer", borderBottom: "1px solid #f3f4f6", color: String(form.jobTypeId) === String(t.id) ? "#2980b9" : "#1f2937", fontWeight: String(form.jobTypeId) === String(t.id) ? "700" : "400", background: String(form.jobTypeId) === String(t.id) ? "#eaf4fb" : "white" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#f8f9fa"}
+                            onMouseLeave={e => e.currentTarget.style.background = String(form.jobTypeId) === String(t.id) ? "#eaf4fb" : "white"}
+                          >
+                            {t.name}
+                          </div>
+                        ))}
+                      {jobTypes.filter(t => t.name.toLowerCase().includes(jobTypeSearch.toLowerCase())).length === 0 && (
+                        <div style={{ padding: "9px 12px", fontSize: "13px", color: "#9ca3af" }}>No results found</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Hidden validation input */}
+                <input type="text" required value={form.jobTypeId} onChange={() => {}} style={{ position: "absolute", opacity: 0, height: 0, width: 0, pointerEvents: "none" }} tabIndex={-1} />
               </div>
               <div style={{ marginBottom: "24px" }}>
                 <label
@@ -660,6 +719,17 @@ export default function RegisterJobsPage() {
                     <option key={c} value={c}>
                       {c}
                     </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ marginBottom: "24px" }}>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>
+                  INSA Competency Framework (ICF)
+                </label>
+                <select value={form.icf} onChange={(e) => set("icf", e.target.value)} style={inp}>
+                  <option value="">-- Select --</option>
+                  {ICF_OPTIONS.map((i) => (
+                    <option key={i} value={i}>{i}</option>
                   ))}
                 </select>
               </div>

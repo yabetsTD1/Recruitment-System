@@ -17,6 +17,18 @@ export default function RecruitmentPostPage() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [showAllClosed, setShowAllClosed] = useState(false);
+  const [closingId, setClosingId] = useState(null);
+
+  const handleClose = async (row) => {
+    if (!confirm(`Close recruitment "${row.jobTitle}"?`)) return;
+    setClosingId(row.id);
+    try {
+      await api.post(`/recruitments/${row.id}/close`);
+      await loadData();
+    } catch { alert("Failed to close."); }
+    finally { setClosingId(null); }
+  };
 
   // Add N working days (Mon-Fri) to a date string, return yyyy-MM-dd
   const addWorkingDays = (startDateStr, days) => {
@@ -44,7 +56,7 @@ export default function RecruitmentPostPage() {
       }
       // reload after potential closes
       const res2 = await api.get("/recruitments");
-      setData(res2.data);
+      setData(res2.data.slice().reverse());
     } catch (e) {
       console.error(e);
     } finally {
@@ -106,9 +118,16 @@ export default function RecruitmentPostPage() {
     (row.jobTitle || "").toLowerCase().includes(q);
 
   const filteredApproved = approved.filter(matchesSearch);
+  const filteredPosted = posted.filter(matchesSearch);
+  // Closed: sorted by closing date ascending (most recent closing date first)
+  const filteredClosed = closed
+    .filter(matchesSearch)
+    .slice()
+    .sort((a, b) => new Date(b.closingDate || 0) - new Date(a.closingDate || 0));
   const filteredPostedClosed = [...posted, ...closed].filter(matchesSearch);
   const visibleApproved = (q || showAll) ? filteredApproved : filteredApproved.slice(0, 5);
   const visiblePostedClosed = (q || showAll) ? filteredPostedClosed : filteredPostedClosed.slice(0, 5);
+  const visibleClosed = (q || showAllClosed) ? filteredClosed : filteredClosed.slice(0, 5);
 
   const inputStyle = {
     width: "100%", padding: "8px 11px", border: "1px solid #d1d5db",

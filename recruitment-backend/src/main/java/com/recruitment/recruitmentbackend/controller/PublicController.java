@@ -16,26 +16,26 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.recruitment.recruitmentbackend.config.JwtUtil;
 import com.recruitment.recruitmentbackend.entity.Applicant;
+import com.recruitment.recruitmentbackend.entity.ApplicantCertification;
+import com.recruitment.recruitmentbackend.entity.ApplicantDocument;
+import com.recruitment.recruitmentbackend.entity.ApplicantEducation;
+import com.recruitment.recruitmentbackend.entity.ApplicantExperience;
+import com.recruitment.recruitmentbackend.entity.ApplicantLanguage;
 import com.recruitment.recruitmentbackend.entity.Application;
 import com.recruitment.recruitmentbackend.entity.JobQualification;
 import com.recruitment.recruitmentbackend.entity.JobQualificationEntry;
 import com.recruitment.recruitmentbackend.entity.Recruitment;
 import com.recruitment.recruitmentbackend.entity.RecruitmentPost;
+import com.recruitment.recruitmentbackend.repository.ApplicantCertificationRepository;
+import com.recruitment.recruitmentbackend.repository.ApplicantDocumentRepository;
+import com.recruitment.recruitmentbackend.repository.ApplicantEducationRepository;
+import com.recruitment.recruitmentbackend.repository.ApplicantExperienceRepository;
+import com.recruitment.recruitmentbackend.repository.ApplicantLanguageRepository;
 import com.recruitment.recruitmentbackend.repository.ApplicantRepository;
 import com.recruitment.recruitmentbackend.repository.ApplicationRepository;
 import com.recruitment.recruitmentbackend.repository.JobQualificationEntryRepository;
 import com.recruitment.recruitmentbackend.repository.RecruitmentPostRepository;
 import com.recruitment.recruitmentbackend.repository.RecruitmentRepository;
-import com.recruitment.recruitmentbackend.repository.ApplicantEducationRepository;
-import com.recruitment.recruitmentbackend.repository.ApplicantCertificationRepository;
-import com.recruitment.recruitmentbackend.repository.ApplicantExperienceRepository;
-import com.recruitment.recruitmentbackend.repository.ApplicantLanguageRepository;
-import com.recruitment.recruitmentbackend.repository.ApplicantDocumentRepository;
-import com.recruitment.recruitmentbackend.entity.ApplicantEducation;
-import com.recruitment.recruitmentbackend.entity.ApplicantCertification;
-import com.recruitment.recruitmentbackend.entity.ApplicantExperience;
-import com.recruitment.recruitmentbackend.entity.ApplicantLanguage;
-import com.recruitment.recruitmentbackend.entity.ApplicantDocument;
 
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -75,6 +75,7 @@ public class PublicController {
         String dateOfBirth;
         String githubUrl;
         String linkedinUrl;
+        String nation;
         String password;
         Integer recruitmentId;
     }
@@ -207,6 +208,7 @@ public class PublicController {
         if (req.getGender() != null && !req.getGender().isEmpty()) applicant.setGender(req.getGender());
         if (req.getGithubUrl() != null && !req.getGithubUrl().isEmpty()) applicant.setGithubUrl(req.getGithubUrl());
         if (req.getLinkedinUrl() != null && !req.getLinkedinUrl().isEmpty()) applicant.setLinkedinUrl(req.getLinkedinUrl());
+        if (req.getNation() != null && !req.getNation().isEmpty()) applicant.setNation(req.getNation());
         if (req.getMaritalStatus() != null && !req.getMaritalStatus().isEmpty())
             applicant.setOtherInfo("maritalStatus:" + req.getMaritalStatus() +
                 (req.getDateOfBirth() != null ? ";dateOfBirth:" + req.getDateOfBirth() : "") +
@@ -251,6 +253,7 @@ public class PublicController {
         String dateOfBirth;
         String githubUrl;
         String linkedinUrl;
+        String nation;
     }
 
     @org.springframework.web.bind.annotation.PutMapping("/applicant/update")
@@ -275,6 +278,7 @@ public class PublicController {
             if (req.getTitle() != null) a.setTitle(req.getTitle());
             if (req.getGithubUrl() != null) a.setGithubUrl(req.getGithubUrl());
             if (req.getLinkedinUrl() != null) a.setLinkedinUrl(req.getLinkedinUrl());
+            if (req.getNation() != null) a.setNation(req.getNation());
 
             // Store extra fields in otherInfo
             String phone2 = req.getPhoneNumber2() != null ? req.getPhoneNumber2() : "";

@@ -295,6 +295,7 @@ const emptyForm = (requesterName = "") => ({
 export default function RecruitmentRequestPage() {
   const { user } = useContext(AuthContext);
   const [requests, setRequests] = useState([]);
+  const [allRequests, setAllRequests] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [orgUnits, setOrgUnits] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -315,7 +316,8 @@ export default function RecruitmentRequestPage() {
         api.get("/recruitments"),
         api.get("/recruitments/request-form-data"),
       ]);
-      setRequests(reqRes.data.filter((r) => r.status !== "DRAFT"));
+      setRequests(reqRes.data.filter((r) => r.status === "REQUESTED").slice().reverse());
+      setAllRequests(reqRes.data.filter((r) => r.status !== "DRAFT"));
       setJobs(formRes.data.jobs || []);
       setOrgUnits(formRes.data.orgUnits || []);
     } catch (e) {
@@ -538,17 +540,17 @@ export default function RecruitmentRequestPage() {
         }}
       >
         {[
-          { label: "Total Requests", value: requests.length, color: "#2980b9" },
+          { label: "Total Requests", value: allRequests.length, color: "#2980b9" },
           {
             label: "Approved",
-            value: requests.filter(
+            value: allRequests.filter(
               (d) => d.status === "APPROVED" || d.status === "POSTED",
             ).length,
             color: "#27ae60",
           },
           {
             label: "Pending",
-            value: requests.filter((d) => d.status === "REQUESTED").length,
+            value: allRequests.filter((d) => d.status === "REQUESTED").length,
             color: "#e67e22",
           },
         ].map((s, i) => (

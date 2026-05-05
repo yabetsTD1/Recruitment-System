@@ -1,5 +1,20 @@
 package com.recruitment.recruitmentbackend.controller;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.recruitment.recruitmentbackend.dto.CreateUserRequest;
 import com.recruitment.recruitmentbackend.entity.JobQualification;
 import com.recruitment.recruitmentbackend.entity.JobQualificationEntry;
@@ -12,8 +27,8 @@ import com.recruitment.recruitmentbackend.entity.SalaryStep;
 import com.recruitment.recruitmentbackend.entity.User;
 import com.recruitment.recruitmentbackend.repository.ApplicationRepository;
 import com.recruitment.recruitmentbackend.repository.EmployeeRepository;
-import com.recruitment.recruitmentbackend.repository.JobQualificationRepository;
 import com.recruitment.recruitmentbackend.repository.JobQualificationEntryRepository;
+import com.recruitment.recruitmentbackend.repository.JobQualificationRepository;
 import com.recruitment.recruitmentbackend.repository.JobTypeRepository;
 import com.recruitment.recruitmentbackend.repository.OrgUnitRepository;
 import com.recruitment.recruitmentbackend.repository.RecruitmentRepository;
@@ -24,15 +39,9 @@ import com.recruitment.recruitmentbackend.repository.SalaryStepRepository;
 import com.recruitment.recruitmentbackend.repository.UserRepository;
 import com.recruitment.recruitmentbackend.service.ApplicantService;
 import com.recruitment.recruitmentbackend.service.UserService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -363,6 +372,7 @@ public class AdminController {
             m.put("id", j.getId());
             m.put("name", j.getName());
             m.put("classCode", j.getClassCode() != null ? j.getClassCode() : "");
+            m.put("icf", j.getIcf() != null ? j.getIcf() : "");
             m.put("jobTypeId", j.getJobType() != null ? j.getJobType().getId() : null);
             m.put("jobTypeName", j.getJobType() != null ? j.getJobType().getName() : "");
             return m;
@@ -374,6 +384,8 @@ public class AdminController {
         RegisteredJob j = new RegisteredJob();
         j.setName(body.getOrDefault("name", "").toString());
         j.setClassCode(body.getOrDefault("classCode", "").toString());
+        Object icf = body.get("icf");
+        if (icf != null && !icf.toString().isEmpty()) j.setIcf(icf.toString());
         Object jtId = body.get("jobTypeId");
         if (jtId != null && !jtId.toString().isEmpty()) {
             jobTypeRepository.findById(Integer.parseInt(jtId.toString())).ifPresent(j::setJobType);
@@ -387,6 +399,7 @@ public class AdminController {
         return registeredJobRepository.findById(id).map(j -> {
             if (body.containsKey("name")) j.setName(body.get("name").toString());
             if (body.containsKey("classCode")) j.setClassCode(body.get("classCode").toString());
+            if (body.containsKey("icf")) j.setIcf(body.get("icf") != null ? body.get("icf").toString() : null);
             Object jtId = body.get("jobTypeId");
             if (jtId != null && !jtId.toString().isEmpty()) {
                 jobTypeRepository.findById(Integer.parseInt(jtId.toString())).ifPresent(j::setJobType);
@@ -618,12 +631,13 @@ public class AdminController {
         m.put("registeredJobId", jq.getRegisteredJob() != null ? jq.getRegisteredJob().getId() : null);
         m.put("registeredJobName", jq.getRegisteredJob() != null ? jq.getRegisteredJob().getName() : "");
         m.put("registeredJobClass", jq.getRegisteredJob() != null && jq.getRegisteredJob().getClassCode() != null ? jq.getRegisteredJob().getClassCode() : "");
+        // ICF comes from the registered job
+        m.put("icf", jq.getRegisteredJob() != null && jq.getRegisteredJob().getIcf() != null ? jq.getRegisteredJob().getIcf() : (jq.getIcf() != null ? jq.getIcf() : ""));
         m.put("jobTitle", jq.getJobTitle() != null ? jq.getJobTitle() : "");
         m.put("minDegree", jq.getMinDegree() != null ? jq.getMinDegree() : "");
         m.put("minExperience", jq.getMinExperience() != null ? jq.getMinExperience() : "");
         m.put("requiredSkills", jq.getRequiredSkills() != null ? jq.getRequiredSkills() : "");
         m.put("grade", jq.getGrade() != null ? jq.getGrade() : "");
-        m.put("icf", jq.getIcf() != null ? jq.getIcf() : "");
         m.put("competencyFramework", jq.getCompetencyFramework() != null ? jq.getCompetencyFramework() : "");
         m.put("fullDescription", jq.getFullDescription() != null ? jq.getFullDescription() : "");
         m.put("status", jq.getStatus().name());

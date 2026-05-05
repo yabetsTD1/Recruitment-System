@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import api from "@/services/api";
 
 // Menu per role
 const SUPER_ADMIN_MENU = [
@@ -185,6 +186,19 @@ export default function DashboardLayout({ children }) {
   const [user, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [expandedMenus, setExpandedMenus] = useState({});
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(0);
+  const [pendingPost, setPendingPost] = useState(0);
+  const notifRef = useRef(null);
+
+  const fetchNotifCounts = async () => {
+    try {
+      const res = await api.get("/recruitments");
+      const list = res.data || [];
+      setPendingApproval(list.filter(r => r.status === "REQUESTED").length);
+      setPendingPost(list.filter(r => r.status === "APPROVED").length);
+    } catch {}
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -202,11 +216,26 @@ export default function DashboardLayout({ children }) {
           setExpandedMenus((prev) => ({ ...prev, [item.id]: true }));
         }
       });
+      // fetch notification counts for ADMIN/SUPER_ADMIN
+      if (parsed.role === "ADMIN" || parsed.role === "SUPER_ADMIN") {
+        fetchNotifCounts();
+      }
     } catch (e) {}
   }, []);
 
   const toggleMenu = (id) =>
     setExpandedMenus((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  // Close notification dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
   const handleLogout = () => {
     localStorage.clear();
     router.push("/");
@@ -322,6 +351,107 @@ export default function DashboardLayout({ children }) {
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {/* Notification Bell */}
+          {user && (user.role === "ADMIN" || user.role === "SUPER_ADMIN") && (
+            <div ref={notifRef} style={{ position: "relative" }}>
+              <button
+                onClick={() => { setNotifOpen(v => !v); fetchNotifCounts(); }}
+                style={{ background: "none", border: "none", cursor: "pointer", position: "relative", padding: "4px", display: "flex", alignItems: "center" }}
+                title="Notifications"
+              >
+                <span style={{ fontSize: "22px" }}>🔔</span>
+                {(pendingApproval + pendingPost) > 0 && (
+                  <span style={{
+                    position: "absolute", top: "0", right: "0",
+                    background: "#e74c3c", color: "white",
+                    borderRadius: "50%", width: "17px", height: "17px",
+                    fontSize: "10px", fontWeight: "700",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    lineHeight: 1,
+                  }}>
+                    {pendingApproval + pendingPost}
+                  </span>
+                )}
+              </button>
+
+              {notifOpen && (
+                <div style={{
+                  position: "absolute", top: "calc(100% + 8px)", right: 0,
+                  background: "white", borderRadius: "10px", width: "300px",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.15)", border: "1px solid #e5e7eb",
+                  zIndex: 200, overflow: "hidden",
+                }}>
+                  <div style={{ padding: "12px 16px", borderBottom: "1px solid #f3f4f6", fontWeight: "700", fontSize: "13px", color: "#1f2937" }}>
+                    Notifications
+                  </div>
+
+                  {pendingApproval === 0 && pendingPost === 0 ? (
+                    <div style={{ padding: "24px 16px", textAlign: "center", color: "#9ca3af", fontSize: "13px" }}>
+                      No pending actions
+                    </div>
+                  ) : (
+                    <div>
+                      {pendingApproval > 0 && (
+                        <Link href="/dashboard/recruitment/approval"
+                          onClick={() => { setNotifOpen(false); setPendingApproval(0); }}
+                          style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px", textDecoration: "none", borderBottom: "1px solid #f9fafb" }}
+                          onMouseEnter={e => e.currentTarget.style.background = "#f8f9fa"}
+                          onMouseLeave={e => e.currentTarget.style.background = "white"}
+                        >
+                          <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#fef3c7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", flexShrink: 0 }}>
+                            📋
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ margin: 0, fontSize: "13px", fontWeight: "600", color: "#1f2937" }}>
+                              Recruitment Approval
+                            </p>
+                            <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#6b7280" }}>
+                              {pendingApproval} request{pendingApproval !== 1 ? "s" : ""} awaiting approval
+                            </p>
+                          </div>
+                          <span style={{ background: "#fef3c7", color: "#92400e", borderRadius: "12px", padding: "2px 8px", fontSize: "11px", fontWeight: "700", flexShrink: 0 }}>
+                            {pendingApproval}
+                          </span>
+                        </Link>
+                      )}
+
+                      {pendingPost > 0 && (
+                        <Link href="/dashboard/recruitment/post"
+                          onClick={() => { setNotifOpen(false); setPendingPost(0); }}
+                          style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px", textDecoration: "none" }}
+                          onMouseEnter={e => e.currentTarget.style.background = "#f8f9fa"}
+                          onMouseLeave={e => e.currentTarget.style.background = "white"}
+                        >
+                          <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#d1fae5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", flexShrink: 0 }}>
+                            📢
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ margin: 0, fontSize: "13px", fontWeight: "600", color: "#1f2937" }}>
+                              Recruitment Post
+                            </p>
+                            <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#6b7280" }}>
+                              {pendingPost} approved recruitment{pendingPost !== 1 ? "s" : ""} ready to post
+                            </p>
+                          </div>
+                          <span style={{ background: "#d1fae5", color: "#065f46", borderRadius: "12px", padding: "2px 8px", fontSize: "11px", fontWeight: "700", flexShrink: 0 }}>
+                            {pendingPost}
+                          </span>
+                        </Link>
+                      )}
+                    </div>
+                  )}
+
+                  <div style={{ padding: "8px 16px", borderTop: "1px solid #f3f4f6", textAlign: "center" }}>
+                    <button onClick={() => { fetchNotifCounts(); }}
+                      style={{ background: "none", border: "none", color: "#2980b9", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {user && (
             <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
               <div

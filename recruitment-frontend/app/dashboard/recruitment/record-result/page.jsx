@@ -25,7 +25,6 @@ export default function RecordResultPage() {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [selectedCriteria, setSelectedCriteria] = useState(null);
   const [resultScore, setResultScore] = useState("");
-  const [resultStatus, setResultStatus] = useState("PASS");
   const [recording, setRecording] = useState(false);
   
   // Overall status management
@@ -71,14 +70,19 @@ export default function RecordResultPage() {
   };
 
   useEffect(() => {
-    if (candidateSearch.trim() && applications.length > 0) {
-      const search = candidateSearch.toLowerCase();
-      setFilteredCandidates(
-        applications.filter(app => 
-          app.applicantName.toLowerCase().includes(search) ||
-          app.applicantEmail.toLowerCase().includes(search)
-        )
-      );
+    if (applications.length > 0) {
+      const search = candidateSearch.toLowerCase().trim();
+      if (search) {
+        setFilteredCandidates(
+          applications.filter(app =>
+            (app.applicantName || "").toLowerCase().includes(search) ||
+            (app.applicantEmail || "").toLowerCase().includes(search)
+          )
+        );
+      } else {
+        // Show all candidates when search is empty
+        setFilteredCandidates(applications);
+      }
     } else {
       setFilteredCandidates([]);
     }
@@ -93,6 +97,8 @@ export default function RecordResultPage() {
       setError("No exam criteria found for this recruitment");
       return;
     }
+    setCandidateSearch("");
+    setFilteredCandidates(applications); // show all by default
     setShowRecordModal(true);
     setError("");
     setSuccess("");
@@ -105,7 +111,6 @@ export default function RecordResultPage() {
     setSelectedCandidate(null);
     setSelectedCriteria(null);
     setResultScore("");
-    setResultStatus("PASS");
   };
 
   const selectCandidate = (app) => {
@@ -115,7 +120,7 @@ export default function RecordResultPage() {
   };
 
   const recordResult = () => {
-    if (!selectedCandidate || !selectedCriteria || !resultScore || !resultStatus) {
+    if (!selectedCandidate || !selectedCriteria || !resultScore) {
       setError("Please fill all fields");
       return;
     }
@@ -132,10 +137,9 @@ export default function RecordResultPage() {
       applicationId: selectedCandidate.id,
       criteriaId: selectedCriteria.id,
       resultScore: score,
-      status: resultStatus
     })
       .then(() => {
-        setSuccess(`Result recorded: ${selectedCandidate.applicantName} - ${resultStatus}`);
+        setSuccess(`Result recorded for ${selectedCandidate.applicantName}`);
         // Refresh exam results
         return api.get(`/recruitments/${selectedRec.id}/exam-results`);
       })
@@ -365,12 +369,7 @@ export default function RecordResultPage() {
                       return (
                         <td key={c.id} style={{ padding: "14px 20px", textAlign: "center", color: "#6b7280" }}>
                           {result ? (
-                            <div>
-                              <div style={{ fontWeight: "600", fontSize: "15px", color: "#1f2937" }}>{result.resultScore}</div>
-                              <span style={{ padding: "2px 8px", borderRadius: "12px", fontSize: "11px", fontWeight: "600", ...(statusColor[result.status] || {}) }}>
-                                {result.status}
-                              </span>
-                            </div>
+                            <span style={{ fontWeight: "600", fontSize: "15px", color: "#1f2937" }}>{result.resultScore}</span>
                           ) : "—"}
                         </td>
                       );
@@ -417,29 +416,37 @@ export default function RecordResultPage() {
               {/* Candidate Search */}
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>Search Candidate</label>
-                <input 
-                  value={candidateSearch}
-                  onChange={e => setCandidateSearch(e.target.value)}
-                  placeholder="Type candidate name or email..."
-                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", boxSizing: "border-box" }}
-                />
-                {filteredCandidates.length > 0 && (
-                  <div style={{ border: "1px solid #d1d5db", borderRadius: "8px", marginTop: "8px", maxHeight: "200px", overflowY: "auto", background: "white" }}>
-                    {filteredCandidates.map(app => (
-                      <div key={app.id} onClick={() => selectCandidate(app)}
-                        style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #f3f4f6", fontSize: "13px" }}
-                        onMouseEnter={e => e.currentTarget.style.background = "#f0f9ff"}
-                        onMouseLeave={e => e.currentTarget.style.background = "white"}>
-                        <div style={{ fontWeight: "600", color: "#2c3e50" }}>{app.applicantName}</div>
-                        <div style={{ fontSize: "12px", color: "#9ca3af" }}>{app.applicantEmail}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {selectedCandidate && (
-                  <div style={{ marginTop: "8px", padding: "10px 12px", background: "#f0f9ff", borderRadius: "8px", border: "1px solid #bae6fd" }}>
-                    <div style={{ fontSize: "14px", fontWeight: "600", color: "#0369a1" }}>{selectedCandidate.applicantName}</div>
-                    <div style={{ fontSize: "12px", color: "#7f8c8d" }}>{selectedCandidate.applicantEmail}</div>
+                {!selectedCandidate ? (
+                  <>
+                    <input 
+                      value={candidateSearch}
+                      onChange={e => setCandidateSearch(e.target.value)}
+                      placeholder="Type to filter candidates..."
+                      autoFocus
+                      style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", boxSizing: "border-box" }}
+                    />
+                    <div style={{ border: "1px solid #d1d5db", borderRadius: "8px", marginTop: "8px", maxHeight: "200px", overflowY: "auto", background: "white" }}>
+                      {filteredCandidates.length === 0 ? (
+                        <p style={{ padding: "12px", color: "#9ca3af", fontSize: "13px", margin: 0 }}>No candidates found.</p>
+                      ) : filteredCandidates.map(app => (
+                        <div key={app.id} onClick={() => selectCandidate(app)}
+                          style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid #f3f4f6", fontSize: "13px" }}
+                          onMouseEnter={e => e.currentTarget.style.background = "#f0f9ff"}
+                          onMouseLeave={e => e.currentTarget.style.background = "white"}>
+                          <div style={{ fontWeight: "600", color: "#2c3e50" }}>{app.applicantName}</div>
+                          <div style={{ fontSize: "12px", color: "#9ca3af" }}>{app.applicantEmail}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ padding: "10px 12px", background: "#f0f9ff", borderRadius: "8px", border: "1px solid #bae6fd", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: "14px", fontWeight: "600", color: "#0369a1" }}>{selectedCandidate.applicantName}</div>
+                      <div style={{ fontSize: "12px", color: "#7f8c8d" }}>{selectedCandidate.applicantEmail}</div>
+                    </div>
+                    <button onClick={() => { setSelectedCandidate(null); setCandidateSearch(""); setFilteredCandidates(applications); }}
+                      style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "18px", lineHeight: 1 }}>×</button>
                   </div>
                 )}
               </div>
@@ -481,22 +488,6 @@ export default function RecordResultPage() {
                 )}
               </div>
 
-              {/* Status Selection */}
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>Status</label>
-                <select 
-                  value={resultStatus}
-                  onChange={e => setResultStatus(e.target.value)}
-                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", boxSizing: "border-box" }}>
-                  <option value="PASS">PASS</option>
-                  <option value="FAIL">FAIL</option>
-                </select>
-                {resultStatus && (
-                  <div style={{ marginTop: "8px", padding: "8px 12px", borderRadius: "8px", fontSize: "13px", fontWeight: "600", ...(resultStatus === "PASS" ? statusColor.PASS : statusColor.FAIL) }}>
-                    Selected Status: {resultStatus}
-                  </div>
-                )}
-              </div>
             </div>
 
             <div style={{ padding: "16px 24px", borderTop: "1px solid #f3f4f6", display: "flex", gap: "12px", justifyContent: "flex-end" }}>

@@ -7,7 +7,7 @@ const ICF_OPTIONS   = Array.from({ length: 15 }, (_, i) => String(i + 1));
 const EDU_CATS      = ["Natural Science", "Social Science", "Engineering", "Health Science", "Law", "Business", "Arts", "Other"];
 const EDU_LEVELS    = ["Certificate", "Diploma", "BSc / BA", "MSc / MA", "PhD", "Other"];
 
-const EMPTY_JQ  = { registeredJobId: "", jobTypeId: "", jobFamilyName: "", jobTitle: "", grade: "", competencyFramework: "", icf: "", status: "ACTIVE" };
+const EMPTY_JQ  = { registeredJobId: "", jobTypeId: "", jobFamilyName: "", jobTitle: "", grade: "", competencyFramework: "", status: "ACTIVE" };
 const EMPTY_ENT = { educationCategory: "", educationLevel: "", fieldOfStudy: "", minExperience: "0", skill: "", knowledge: "", competency: "" };
 
 const inp = { width: "100%", padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "13px", outline: "none", boxSizing: "border-box", background: "white" };
@@ -41,6 +41,7 @@ function JobQualificationContent() {
   const [entryForm, setEntryForm] = useState(EMPTY_ENT);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [showAllJq, setShowAllJq] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -115,7 +116,6 @@ function JobQualificationContent() {
       jobTitle: jq.jobTitle,
       grade: rj?.classCode || jq.grade || "",
       competencyFramework: jq.competencyFramework || "",
-      icf: jq.icf || "",
       status: jq.status,
     });
     setShowJqModal(true);
@@ -167,11 +167,14 @@ function JobQualificationContent() {
     catch { setMsg({ type: "error", text: "Failed to delete." }); }
   };
 
-  const filtered = qualifications.filter(jq =>
-    (!filterJob || String(jq.registeredJobId) === String(filterJob)) &&
-    (!filterIcf || (jq.icf || "") === filterIcf)
-  );
+  const filtered = qualifications.filter(jq => {
+    if (filterJob && String(jq.registeredJobId) !== String(filterJob)) return false;
+    if (filterIcf && (jq.icf || "") !== filterIcf) return false;
+    return true;
+  });
   const list = filterJob || filterIcf ? filtered : qualifications;
+  const hasMoreJq = list.length > 5;
+  const displayedList = showAllJq ? list : list.slice(-5).reverse();
 
   const statusBadge = (s) => ({ padding: "3px 10px", borderRadius: "20px", fontSize: "11px", fontWeight: "700", background: s === "ACTIVE" ? "#d1fae5" : "#fef3c7", color: s === "ACTIVE" ? "#065f46" : "#92400e" });
 
@@ -219,7 +222,7 @@ function JobQualificationContent() {
           </select>
         </div>
         <div style={{ flex: 1, minWidth: "140px" }}>
-          <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#7f8c8d", marginBottom: "5px", textTransform: "uppercase" }}>Competency Framework</label>
+          <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#7f8c8d", marginBottom: "5px", textTransform: "uppercase" }}>ICF (Competency Framework)</label>
           <select value={filterIcf} onChange={e => setFilterIcf(e.target.value)} style={inp}>
             <option value="">All</option>
             {ICF_OPTIONS.map(i => <option key={i} value={i}>{i}</option>)}
@@ -242,16 +245,17 @@ function JobQualificationContent() {
             {qualifications.length === 0 ? "No qualifications yet. Click \"+ Add Qualification\" to get started." : "No results match your filters."}
           </div>
         ) : (
+          <>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead style={{ background: "linear-gradient(135deg, #f8fafc, #f1f5f9)" }}>
               <tr>
-                {["#", "Job Title", "Job Type", "Grade", "Status", "Actions"].map(h => (
+                {["#", "Job Title", "Job Type", "Class", "Status", "Actions"].map(h => (
                   <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#374151", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {list.map((jq, idx) => (
+              {displayedList.map((jq, idx) => (
                 <tr key={jq.id} style={{ borderBottom: "1px solid #f9fafb" }}
                   onMouseEnter={e => e.currentTarget.style.background = "#f8f9fa"}
                   onMouseLeave={e => e.currentTarget.style.background = "white"}>
@@ -273,6 +277,17 @@ function JobQualificationContent() {
               ))}
             </tbody>
           </table>
+          {hasMoreJq && (
+            <div style={{ padding: "12px 16px", borderTop: "1px solid #f1f5f9", textAlign: "center" }}>
+              <button
+                onClick={() => setShowAllJq(!showAllJq)}
+                style={{ padding: "7px 20px", background: "#f1f5f9", border: "1px solid #e2e8f0", borderRadius: "6px", cursor: "pointer", fontSize: "12px", fontWeight: "600", color: "#374151" }}
+              >
+                {showAllJq ? `Show Recent 5 ▲` : `Show All ${list.length} Records ▼`}
+              </button>
+            </div>
+          )}
+          </>
         )}
       </div>
 
@@ -292,7 +307,7 @@ function JobQualificationContent() {
                 {[
                   { label: "Job Title", value: selected.jobTitle },
                   { label: "Job Family", value: selected.jobTypeName || "—" },
-                  { label: "Grade / Class", value: selected.grade || "—" },
+                  { label: "Class", value: selected.grade || "—" },
                   { label: "INSA Competency Framework (ICF)", value: selected.icf || selected.competencyFramework || "—" },
                 ].map(f => (
                   <div key={f.label}>
@@ -377,13 +392,6 @@ function JobQualificationContent() {
                     {jqForm.grade || "— auto-filled from Job —"}
                   </div>
                 </div>
-              </div>
-              <div style={{ marginBottom: "14px" }}>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>INSA Competency Framework (ICF)</label>
-                <select value={jqForm.icf} onChange={e => setJ("icf", e.target.value)} style={inp}>
-                  <option value="">-- Select --</option>
-                  {ICF_OPTIONS.map(i => <option key={i} value={i}>{i}</option>)}
-                </select>
               </div>
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>Status</label>

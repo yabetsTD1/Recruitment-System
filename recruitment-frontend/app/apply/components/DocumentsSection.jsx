@@ -376,7 +376,6 @@ export default function DocumentsSection({
                       "No",
                       "File Name",
                       "Document Type",
-                      "Type",
                       "Actions",
                     ].map((h) => (
                       <th
@@ -456,20 +455,6 @@ export default function DocumentsSection({
                           }}
                         >
                           {doc.documentType || "—"}
-                        </span>
-                      </td>
-                      <td style={{ padding: "12px 16px" }}>
-                        <span
-                          style={{
-                            background: "#e0f2fe",
-                            padding: "3px 10px",
-                            borderRadius: "6px",
-                            fontSize: "11px",
-                            fontWeight: "600",
-                            color: "#075985",
-                          }}
-                        >
-                          {doc.fileType || "—"}
                         </span>
                       </td>
                       <td style={{ padding: "12px 16px" }}>

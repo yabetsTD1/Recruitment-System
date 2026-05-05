@@ -596,7 +596,8 @@ public class PublicController {
     @PostMapping(value = "/applicant/document", consumes = "multipart/form-data")
     public ResponseEntity<?> uploadDocument(
             @org.springframework.web.bind.annotation.RequestParam("email") String email,
-            @org.springframework.web.bind.annotation.RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+            @org.springframework.web.bind.annotation.RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @org.springframework.web.bind.annotation.RequestParam(value = "documentType", required = false) String documentType) {
         Applicant applicant = applicantRepository.findByEmail(email).orElse(null);
         if (applicant == null) return ResponseEntity.badRequest().body(Map.of("message", "Applicant not found"));
         try {
@@ -604,9 +605,15 @@ public class PublicController {
             doc.setApplicant(applicant);
             doc.setFileName(file.getOriginalFilename());
             doc.setFileType(file.getContentType());
+            doc.setDocumentType(documentType);
             doc.setFileData(file.getBytes());
             ApplicantDocument saved = documentRepository.save(doc);
-            return ResponseEntity.ok(Map.of("id", saved.getId(), "fileName", saved.getFileName(), "fileType", saved.getFileType(), "message", "Uploaded"));
+            return ResponseEntity.ok(Map.of(
+                    "id", saved.getId(),
+                    "fileName", saved.getFileName(),
+                    "fileType", saved.getFileType(),
+                    "documentType", saved.getDocumentType(),
+                    "message", "Uploaded"));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("message", "Upload failed: " + e.getMessage()));
         }
@@ -620,6 +627,7 @@ public class PublicController {
                 m.put("id", d.getId());
                 m.put("fileName", d.getFileName() != null ? d.getFileName() : "");
                 m.put("fileType", d.getFileType() != null ? d.getFileType() : "");
+                m.put("documentType", d.getDocumentType() != null ? d.getDocumentType() : "");
                 return m;
             }).toList())
         ).orElse(ResponseEntity.notFound().build());

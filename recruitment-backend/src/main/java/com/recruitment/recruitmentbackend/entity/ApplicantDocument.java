@@ -30,6 +30,9 @@ public class ApplicantDocument {
     @Column(name = "file_type", length = 100)
     private String fileType;
 
+    @Column(name = "document_type", length = 100)
+    private String documentType;
+
     @Column(name = "file_data", columnDefinition = "LONGBLOB")
     private byte[] fileData;
 }

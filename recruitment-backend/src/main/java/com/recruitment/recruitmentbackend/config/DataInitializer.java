@@ -20,7 +20,7 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         Role superAdminRole = seedRole("SUPER_ADMIN");
-        Role adminRole = seedRole("ADMIN");
+        seedRole("ADMIN");
         seedRole("EMPLOYEE");
 
         // Seed or update super admin user
@@ -33,17 +33,6 @@ public class DataInitializer implements CommandLineRunner {
         user.setStatus(User.UserStatus.ACTIVE);
         userRepository.save(user);
         System.out.println("✅ Super admin seeded: admin@insa.gov.et / admin123");
-
-        // Seed or update default recruiter/admin user
-        User recruiter = userRepository.findByEmail("tolman@gmail.com").orElse(new User());
-        recruiter.setFullName("HR Recruiter");
-        recruiter.setUsername("recruiter");
-        recruiter.setEmail("tolman@gmail.com");
-        recruiter.setPassword(passwordEncoder.encode("12345678"));
-        recruiter.setRole(adminRole);
-        recruiter.setStatus(User.UserStatus.ACTIVE);
-        userRepository.save(recruiter);
-        System.out.println("✅ Recruiter seeded: tolman@gmail.com / 12345678");
     }
 
     private Role seedRole(String name) {

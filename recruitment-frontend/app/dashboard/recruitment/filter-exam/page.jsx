@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import api from "@/services/api";
+import { ETHIOPIAN_NATIONS } from "@/data/ethiopianNations";
 
 export default function FilterCandidatesExamPage() {
   const [recruitments, setRecruitments] = useState([]);
@@ -16,16 +17,19 @@ export default function FilterCandidatesExamPage() {
   const [selectedApps, setSelectedApps] = useState([]);
   const [tableSearch, setTableSearch] = useState("");
   
-  // Filter criteria
+  // Filter criteria (modal — only GPA and Experience)
   const [filters, setFilters] = useState({
     minGpa: "",
     minExperience: "",
+  });
+  const [appliedFilters, setAppliedFilters] = useState({});
+
+  // Inline column dropdown filters
+  const [colFilters, setColFilters] = useState({
     gender: "",
     nation: "",
     graduatedFrom: "",
-    physicalDisability: ""
   });
-  const [appliedFilters, setAppliedFilters] = useState({});
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -59,10 +63,6 @@ export default function FilterCandidatesExamPage() {
     const params = new URLSearchParams();
     if (filters.minGpa) params.append("minGpa", filters.minGpa);
     if (filters.minExperience) params.append("minExperience", filters.minExperience);
-    if (filters.gender) params.append("gender", filters.gender);
-    if (filters.nation) params.append("nation", filters.nation);
-    if (filters.graduatedFrom) params.append("graduatedFrom", filters.graduatedFrom);
-    if (filters.physicalDisability) params.append("physicalDisability", filters.physicalDisability);
 
     setLoading(true);
     api.get(`/recruitments/${selectedRec.id}/applications/filter?${params.toString()}`)
@@ -76,15 +76,9 @@ export default function FilterCandidatesExamPage() {
   };
 
   const clearFilters = () => {
-    setFilters({
-      minGpa: "",
-      minExperience: "",
-      gender: "",
-      nation: "",
-      graduatedFrom: "",
-      physicalDisability: ""
-    });
+    setFilters({ minGpa: "", minExperience: "" });
     setAppliedFilters({});
+    setColFilters({ gender: "", nation: "", graduatedFrom: "" });
     setFilteredApps(applications);
     setShowCriteriaModal(false);
   };
@@ -237,10 +231,6 @@ export default function FilterCandidatesExamPage() {
                   <span style={{ fontWeight: "600" }}>Active Filters:</span>
                   {appliedFilters.minGpa && <span>GPA ≥ {appliedFilters.minGpa}</span>}
                   {appliedFilters.minExperience && <span>Exp ≥ {appliedFilters.minExperience}y</span>}
-                  {appliedFilters.gender && <span>Gender: {appliedFilters.gender}</span>}
-                  {appliedFilters.nation && <span>Nation: {appliedFilters.nation}</span>}
-                  {appliedFilters.graduatedFrom && <span>From: {appliedFilters.graduatedFrom}</span>}
-                  {appliedFilters.physicalDisability && <span>Disability: {appliedFilters.physicalDisability}</span>}
                 </div>
               </>
             )}
@@ -333,13 +323,43 @@ export default function FilterCandidatesExamPage() {
                         style={{ cursor: "pointer" }}
                       />
                     </th>
-                    {["Name", "Gender", "GPA", "Experience", "Graduated From", "Nation", "Status", "Actions"].map(h => (
-                      <th key={h} style={{ padding: "14px 20px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151" }}>{h}</th>
-                    ))}
+                    <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151" }}>Name</th>
+                    <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151" }}>
+                      <div>Gender</div>
+                      <select value={colFilters.gender} onChange={e => setColFilters(f => ({ ...f, gender: e.target.value }))}
+                        style={{ marginTop: "4px", width: "100%", padding: "4px 6px", border: "1px solid #d1d5db", borderRadius: "4px", fontSize: "11px", fontWeight: "400" }}>
+                        <option value="">All</option>
+                        {[...new Set(filteredApps.map(a => a.applicantGender).filter(Boolean))].map(g => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </th>
+                    <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151" }}>GPA</th>
+                    <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151" }}>Experience</th>
+                    <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151" }}>
+                      <div>Graduated From</div>
+                      <input value={colFilters.graduatedFrom} onChange={e => setColFilters(f => ({ ...f, graduatedFrom: e.target.value }))}
+                        placeholder="Filter..."
+                        style={{ marginTop: "4px", width: "100%", padding: "4px 6px", border: "1px solid #d1d5db", borderRadius: "4px", fontSize: "11px", fontWeight: "400", boxSizing: "border-box" }} />
+                    </th>
+                    <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151" }}>
+                      <div>Nation</div>
+                      <select value={colFilters.nation} onChange={e => setColFilters(f => ({ ...f, nation: e.target.value }))}
+                        style={{ marginTop: "4px", width: "100%", padding: "4px 6px", border: "1px solid #d1d5db", borderRadius: "4px", fontSize: "11px", fontWeight: "400" }}>
+                        <option value="">All</option>
+                        {ETHIOPIAN_NATIONS.map((n, i) => <option key={i} value={n}>{n}</option>)}
+                      </select>
+                    </th>
+                    <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151" }}>Status</th>
+                    <th style={{ padding: "14px 20px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredApps.filter(row => !tableSearch.trim() || (row.applicantName || "").toLowerCase().includes(tableSearch.toLowerCase())).map(row => (
+                  {filteredApps.filter(row => {
+                    if (tableSearch.trim() && !(row.applicantName || "").toLowerCase().includes(tableSearch.toLowerCase())) return false;
+                    if (colFilters.gender && (row.applicantGender || "") !== colFilters.gender) return false;
+                    if (colFilters.nation && (row.nation || "") !== colFilters.nation) return false;
+                    if (colFilters.graduatedFrom && !(row.graduatedFrom || "").toLowerCase().includes(colFilters.graduatedFrom.toLowerCase())) return false;
+                    return true;
+                  }).map(row => (
                     <tr key={row.id} style={{ borderTop: "1px solid #f9fafb", background: selectedApps.includes(row.id) ? "#f0f9ff" : "white" }}>
                       <td style={{ padding: "14px 20px" }}>
                         <input 
@@ -417,14 +437,7 @@ export default function FilterCandidatesExamPage() {
                   value={filters.minGpa}
                   onChange={(e) => setFilters({ ...filters, minGpa: e.target.value })}
                   placeholder="e.g., 3.0"
-                  style={{ 
-                    width: "100%", 
-                    padding: "10px 12px", 
-                    border: "1px solid #d1d5db", 
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box"
-                  }}
+                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", boxSizing: "border-box" }}
                 />
               </div>
 
@@ -438,103 +451,8 @@ export default function FilterCandidatesExamPage() {
                   value={filters.minExperience}
                   onChange={(e) => setFilters({ ...filters, minExperience: e.target.value })}
                   placeholder="e.g., 2"
-                  style={{ 
-                    width: "100%", 
-                    padding: "10px 12px", 
-                    border: "1px solid #d1d5db", 
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box"
-                  }}
+                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", boxSizing: "border-box" }}
                 />
-              </div>
-
-              <div>
-                <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: "600", color: "#374151" }}>
-                  Gender
-                </label>
-                <select
-                  value={filters.gender}
-                  onChange={(e) => setFilters({ ...filters, gender: e.target.value })}
-                  style={{ 
-                    width: "100%", 
-                    padding: "10px 12px", 
-                    border: "1px solid #d1d5db", 
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box"
-                  }}
-                >
-                  <option value="">All</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: "600", color: "#374151" }}>
-                  Nation
-                </label>
-                <input
-                  type="text"
-                  value={filters.nation}
-                  onChange={(e) => setFilters({ ...filters, nation: e.target.value })}
-                  placeholder="e.g., Ethiopian"
-                  style={{ 
-                    width: "100%", 
-                    padding: "10px 12px", 
-                    border: "1px solid #d1d5db", 
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box"
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: "600", color: "#374151" }}>
-                  Graduated From
-                </label>
-                <input
-                  type="text"
-                  value={filters.graduatedFrom}
-                  onChange={(e) => setFilters({ ...filters, graduatedFrom: e.target.value })}
-                  placeholder="e.g., University name"
-                  style={{ 
-                    width: "100%", 
-                    padding: "10px 12px", 
-                    border: "1px solid #d1d5db", 
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box"
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: "block", marginBottom: "6px", fontSize: "13px", fontWeight: "600", color: "#374151" }}>
-                  Physical Disability
-                </label>
-                <select
-                  value={filters.physicalDisability}
-                  onChange={(e) => setFilters({ ...filters, physicalDisability: e.target.value })}
-                  style={{ 
-                    width: "100%", 
-                    padding: "10px 12px", 
-                    border: "1px solid #d1d5db", 
-                    borderRadius: "8px",
-                    fontSize: "14px",
-                    boxSizing: "border-box"
-                  }}
-                >
-                  <option value="">All</option>
-                  <option value="None">None</option>
-                  <option value="Visual">Visual</option>
-                  <option value="Hearing">Hearing</option>
-                  <option value="Physical">Physical</option>
-                  <option value="Other">Other</option>
-                </select>
               </div>
             </div>
 

@@ -31,6 +31,7 @@ function InfoRow({ label, value }) {
 export default function RecruitmentApprovalPage() {
   const { user } = useContext(AuthContext);
   const [data, setData] = useState([]);
+  const [allData, setAllData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [entries, setEntries] = useState([]);
@@ -44,7 +45,8 @@ export default function RecruitmentApprovalPage() {
     setLoading(true);
     try {
       const res = await api.get("/recruitments");
-      setData(res.data.filter(r => r.status !== "DRAFT"));
+      setData(res.data.filter(r => r.status === "REQUESTED").slice().reverse());
+      setAllData(res.data.filter(r => r.status !== "DRAFT"));
     } catch { } finally { setLoading(false); }
   };
 
@@ -92,9 +94,9 @@ export default function RecruitmentApprovalPage() {
     }
   };
 
-  const requested = data.filter(d => d.status === "REQUESTED");
-  const approved  = data.filter(d => d.status === "APPROVED" || d.status === "POSTED");
-  const rejected  = data.filter(d => d.status === "REJECTED");
+  const requested = allData.filter(d => d.status === "REQUESTED");
+  const approved  = allData.filter(d => d.status === "APPROVED" || d.status === "POSTED");
+  const rejected  = allData.filter(d => d.status === "REJECTED");
 
   return (
     <div style={{ fontFamily: "sans-serif", color: "#2c3e50" }}>

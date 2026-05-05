@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ETHIOPIAN_NATIONS } from "@/data/ethiopianNations";
 
 export default function PersonalInfoSection({
   form,
@@ -36,6 +37,7 @@ export default function PersonalInfoSection({
           dateOfBirth: form.dateOfBirth,
           githubUrl: form.githubUrl,
           linkedinUrl: form.linkedinUrl,
+          nation: form.nation || "",
         }),
       });
       const data = await res.json();
@@ -201,6 +203,14 @@ export default function PersonalInfoSection({
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={labelStyle}>Email: <span style={{ color: "#e74c3c" }}>*</span></label>
               <input style={inputStyle} type="email" placeholder="abebe.kebede@gmail.com" value={form.email} onChange={e => set("email", e.target.value)} />
+            </div>
+
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label style={labelStyle}>Nationality (Ethiopian Nation)</label>
+              <select style={inputStyle} value={form.nation || ""} onChange={e => set("nation", e.target.value)}>
+                <option value="">-- Select Nationality --</option>
+                {ETHIOPIAN_NATIONS.map((n, i) => <option key={i} value={n}>{n}</option>)}
+              </select>
             </div>
 
             <div style={{ gridColumn: "1 / -1", borderTop: "1px solid #f0f3f4", paddingTop: "20px", marginTop: "20px" }}>

@@ -73,6 +73,14 @@ export default function Home() {
             }}>
               Staff Login
             </Link>
+            <Link href="/external-auth" style={{
+              marginLeft: "6px",
+              background: "transparent", color: "white", textDecoration: "none",
+              padding: "6px 16px", borderRadius: "4px", fontSize: "13px", fontWeight: "600",
+              border: "1px solid rgba(255,255,255,0.5)",
+            }}>
+              Applicant Login
+            </Link>
           </div>
         </div>
       </nav>
@@ -144,11 +152,44 @@ export default function Home() {
         {loading ? (
           <div style={{ padding: "48px", textAlign: "center", color: "#95a5a6", fontSize: "14px" }}>Loading jobs...</div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px", color: "#7f8c8d", background: "white", borderRadius: "10px" }}>
-            <div style={{ fontSize: "48px", marginBottom: "12px" }}>📋</div>
-            <p style={{ fontSize: "16px" }}>{jobs.length === 0 ? "No open positions at the moment." : "No jobs match your search."}</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div style={{ textAlign: "center", padding: "60px", color: "#7f8c8d", background: "white", borderRadius: "10px" }}>
+              <div style={{ fontSize: "48px", marginBottom: "12px" }}>📋</div>
+              <p style={{ fontSize: "16px" }}>{jobs.length === 0 ? "No open positions at the moment." : "No jobs match your search."}</p>
+            </div>
+            {/* Login banner — always visible even when no jobs */}
+            <div style={{
+              background: "linear-gradient(135deg, #1e3a5f, #2980b9)",
+              borderRadius: "12px",
+              padding: "32px 40px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "20px",
+              boxShadow: "0 4px 16px rgba(41,128,185,0.3)",
+            }}>
+              <div>
+                <h3 style={{ color: "white", fontSize: "18px", fontWeight: "700", margin: "0 0 6px 0" }}>
+                  Already applied? Check your status
+                </h3>
+                <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "14px", margin: 0 }}>
+                  Login to see your job application status, profile, and updates.
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                <Link href="/external-auth" style={{
+                  background: "white", color: "#2980b9", textDecoration: "none",
+                  padding: "10px 24px", borderRadius: "6px", fontWeight: "700", fontSize: "14px",
+                  whiteSpace: "nowrap",
+                }}>
+                  Login / Sign Up
+                </Link>
+              </div>
+            </div>
           </div>
         ) : (
+          <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "24px" }}>
             {filtered.map((job) => (
               <div key={job.id} style={{ 
@@ -254,6 +295,36 @@ export default function Home() {
               </div>
             ))}
           </div>
+          {/* Login banner — always visible */}
+          <div style={{
+            marginTop: "32px",
+            background: "linear-gradient(135deg, #1e3a5f, #2980b9)",
+            borderRadius: "12px",
+            padding: "28px 40px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "20px",
+            boxShadow: "0 4px 16px rgba(41,128,185,0.3)",
+          }}>
+            <div>
+              <h3 style={{ color: "white", fontSize: "18px", fontWeight: "700", margin: "0 0 6px 0" }}>
+                Already applied? Check your status
+              </h3>
+              <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "14px", margin: 0 }}>
+                Login to see your job application status, profile, and updates.
+              </p>
+            </div>
+            <Link href="/external-auth" style={{
+              background: "white", color: "#2980b9", textDecoration: "none",
+              padding: "10px 24px", borderRadius: "6px", fontWeight: "700", fontSize: "14px",
+              whiteSpace: "nowrap",
+            }}>
+              Login / Sign Up
+            </Link>
+          </div>
+          </>
         )}
       </section>
 

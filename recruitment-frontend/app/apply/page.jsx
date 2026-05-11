@@ -413,12 +413,38 @@ export default function ApplyPage() {
   const [viewingJob, setViewingJob] = useState(null); // job detail modal
   const [loadingJobDetail, setLoadingJobDetail] = useState(false);
 
+  // Candidate profile view state
+  const [profileDetails, setProfileDetails] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [selectedAppId, setSelectedAppId] = useState(null); // selected application for profile view
+
   const applyForJob = (jobId) => {
     const email = localStorage.getItem("externalEmail");
     if (!email) { router.push(`/external-auth?jobId=${jobId}`); return; }
     setSelectedJobId(jobId);
     setActivePage("apply");
     setViewingJob(null);
+  };
+
+  const loadProfileDetails = (email) => {
+    if (!email) return;
+    setLoadingProfile(true);
+    const enc = encodeURIComponent(email);
+    Promise.all([
+      fetch(`${API}/public/applicant/education?email=${enc}`).then(r => r.json()).catch(() => []),
+      fetch(`${API}/public/applicant/experience?email=${enc}`).then(r => r.json()).catch(() => []),
+      fetch(`${API}/public/applicant/certification?email=${enc}`).then(r => r.json()).catch(() => []),
+      fetch(`${API}/public/applicant/language?email=${enc}`).then(r => r.json()).catch(() => []),
+      fetch(`${API}/public/applicant/document?email=${enc}`).then(r => r.json()).catch(() => []),
+    ]).then(([edu, exp, cert, lang, docs]) => {
+      setProfileDetails({
+        education: Array.isArray(edu) ? edu : [],
+        experience: Array.isArray(exp) ? exp : [],
+        certifications: Array.isArray(cert) ? cert : [],
+        languages: Array.isArray(lang) ? lang : [],
+        documents: Array.isArray(docs) ? docs : [],
+      });
+    }).finally(() => setLoadingProfile(false));
   };
 
   const hasApplied = (jobId) => applications.some(a => a.recruitmentId === jobId);
@@ -465,6 +491,8 @@ export default function ApplyPage() {
       });
       setNotifications(notifs);
       setDataLoaded(true);
+      // Load profile details once we have the email
+      loadProfileDetails(email);
     });
   }, []);
 
@@ -550,7 +578,7 @@ export default function ApplyPage() {
           <nav style={{ flex: 1, padding: "12px 0", overflowY: "auto" }}>
             {sidebarItems.map(item => (
               <button key={item.id}
-                onClick={() => { if (item.action) item.action(); else setActivePage(item.id); }}
+                onClick={() => { if (item.action) item.action(); else { if (item.id === "apply") setSelectedJobId(null); setActivePage(item.id); } }}
                 style={{ width: "100%", display: "flex", alignItems: "center", gap: "10px", padding: sidebarCollapsed ? "12px 0" : "12px 20px", background: activePage === item.id ? "rgba(59,130,246,0.15)" : "transparent", borderTop: "none", borderRight: "none", borderBottom: "none", borderLeft: activePage === item.id ? "3px solid #3b82f6" : "3px solid transparent", color: activePage === item.id ? "white" : "rgba(255,255,255,0.6)", fontSize: "13px", fontWeight: activePage === item.id ? "600" : "500", cursor: "pointer", justifyContent: sidebarCollapsed ? "center" : "flex-start", transition: "all 0.2s" }}>
                 <span style={{ fontSize: "16px", minWidth: "16px" }}>{item.icon}</span>
                 {!sidebarCollapsed && <span style={{ whiteSpace: "nowrap" }}>{item.label}</span>}
@@ -687,9 +715,265 @@ export default function ApplyPage() {
           )}
 
           {/* CANDIDATE PROFILE (Apply Form) */}
-          {activePage === "apply" && (
+          {activePage === "apply" && !selectedJobId && (
+            <div style={{ padding: "28px 32px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <div>
+                  <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#1f2937", margin: 0 }}>My Candidate Profile</h1>
+                  <p style={{ color: "#6b7280", fontSize: "13px", margin: "4px 0 0" }}>View the profile you submitted for your applications</p>
+                </div>
+                <button onClick={() => setActivePage("jobs")}
+                  style={{ padding: "9px 18px", background: "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white", border: "none", borderRadius: "8px", fontWeight: "600", fontSize: "13px", cursor: "pointer" }}>
+                  + Apply for Another Job
+                </button>
+              </div>
+
+              {/* Vacancy Selector */}
+              {applications.length > 0 && (
+                <div style={{ background: "white", borderRadius: "10px", padding: "16px 20px", marginBottom: "20px", border: "1px solid #e5e7eb", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>
+                    Viewing Application For
+                  </label>
+                  <select
+                    value={selectedAppId || ""}
+                    onChange={e => setSelectedAppId(e.target.value ? Number(e.target.value) : null)}
+                    style={{ width: "100%", maxWidth: "480px", padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: "7px", fontSize: "14px", color: "#1f2937", background: "white", cursor: "pointer" }}>
+                    <option value="">— All Applications (General Profile) —</option>
+                    {applications.map(app => (
+                      <option key={app.id} value={app.id}>
+                        {app.jobTitle}{app.department ? ` · ${app.department}` : ""} — {app.status}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedAppId && (() => {
+                    const app = applications.find(a => a.id === selectedAppId);
+                    if (!app) return null;
+                    const s = statusStyle[app.status] || { bg: "#f3f4f6", color: "#374151", label: app.status };
+                    return (
+                      <div style={{ marginTop: "10px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
+                        <span style={{ fontSize: "12px", color: "#6b7280" }}>📅 Applied: {app.appliedAt ? app.appliedAt.slice(0, 10) : "—"}</span>
+                        {app.closingDate && <span style={{ fontSize: "12px", color: "#f59e0b", fontWeight: "600" }}>⏰ Closes: {app.closingDate}</span>}
+                        <span style={{ padding: "2px 10px", borderRadius: "12px", fontSize: "11px", fontWeight: "700", background: s.bg, color: s.color }}>{s.label}</span>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {loadingProfile ? (
+                <div style={{ textAlign: "center", padding: "60px", color: "#6b7280" }}>Loading profile...</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+                  {/* Personal Info */}
+                  <ProfileSection title="👤 Personal Information" color="#2980b9">
+                    {applicant ? (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+                        {[
+                          { label: "First Name", value: applicant.firstName },
+                          { label: "Middle Name", value: applicant.middleName },
+                          { label: "Last Name", value: applicant.lastName },
+                          { label: "Email", value: applicant.email },
+                          { label: "Phone", value: applicant.phone },
+                          { label: "Gender", value: applicant.gender },
+                          { label: "Title", value: applicant.title },
+                          { label: "Marital Status", value: applicant.maritalStatus },
+                          { label: "Date of Birth", value: applicant.dateOfBirth },
+                          { label: "Location", value: applicant.location },
+                          { label: "Nation", value: applicant.nation },
+                          { label: "GPA", value: applicant.gpa },
+                          { label: "Experience (yrs)", value: applicant.experienceYears },
+                          { label: "Graduated From", value: applicant.graduatedFrom },
+                          { label: "GitHub", value: applicant.githubUrl },
+                          { label: "LinkedIn", value: applicant.linkedinUrl },
+                        ].filter(f => f.value).map((f, i) => (
+                          <div key={i} style={{ background: "#f8f9fa", borderRadius: "7px", padding: "10px 14px" }}>
+                            <div style={{ fontSize: "10px", fontWeight: "700", color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "3px" }}>{f.label}</div>
+                            <div style={{ fontSize: "13px", fontWeight: "600", color: "#1f2937" }}>{String(f.value)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ color: "#9ca3af", fontSize: "13px", margin: 0 }}>No personal information found.</p>
+                    )}
+                  </ProfileSection>
+
+                  {/* Education */}
+                  <ProfileSection title="🎓 Education" color="#8b5cf6">
+                    {!profileDetails?.education?.length ? (
+                      <p style={{ color: "#9ca3af", fontSize: "13px", margin: 0 }}>No education records.</p>
+                    ) : (
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                          <thead>
+                            <tr style={{ background: "#f8f9fa" }}>
+                              {["Institution", "Field of Study", "Level", "Start", "End", "Paid By", "Location"].map(h => (
+                                <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: "700", color: "#6b7280", borderBottom: "1px solid #e5e7eb", fontSize: "11px", whiteSpace: "nowrap" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {profileDetails.education.map((e, i) => (
+                              <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                <td style={{ padding: "9px 12px", fontWeight: "600", color: "#1f2937" }}>{e.institution || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{e.fieldOfStudy || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{e.educationLevel || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{e.startDate || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{e.endDate || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{e.paidBy || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{e.location || "—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </ProfileSection>
+
+                  {/* Experience */}
+                  <ProfileSection title="💼 Work Experience" color="#06b6d4">
+                    {!profileDetails?.experience?.length ? (
+                      <p style={{ color: "#9ca3af", fontSize: "13px", margin: 0 }}>No experience records.</p>
+                    ) : (
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                          <thead>
+                            <tr style={{ background: "#f8f9fa" }}>
+                              {["Job Title", "Institution", "Org Type", "Employment Type", "Start", "End"].map(h => (
+                                <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: "700", color: "#6b7280", borderBottom: "1px solid #e5e7eb", fontSize: "11px", whiteSpace: "nowrap" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {profileDetails.experience.map((e, i) => (
+                              <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                <td style={{ padding: "9px 12px", fontWeight: "600", color: "#1f2937" }}>{e.jobTitle || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{e.institution || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{e.organizationType || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{e.employmentType || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{e.startDate || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{e.endDate || "—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </ProfileSection>
+
+                  {/* Certifications */}
+                  <ProfileSection title="📜 Licenses & Certifications" color="#f59e0b">
+                    {!profileDetails?.certifications?.length ? (
+                      <p style={{ color: "#9ca3af", fontSize: "13px", margin: 0 }}>No certification records.</p>
+                    ) : (
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                          <thead>
+                            <tr style={{ background: "#f8f9fa" }}>
+                              {["License / Certification", "Institution", "Skills", "Start", "End"].map(h => (
+                                <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: "700", color: "#6b7280", borderBottom: "1px solid #e5e7eb", fontSize: "11px", whiteSpace: "nowrap" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {profileDetails.certifications.map((c, i) => (
+                              <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                <td style={{ padding: "9px 12px", fontWeight: "600", color: "#1f2937" }}>{c.professionalLicense || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{c.institution || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{c.skills || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{c.startDate || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{c.endDate || "—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </ProfileSection>
+
+                  {/* Languages */}
+                  <ProfileSection title="🌐 Language Proficiency" color="#ec4899">
+                    {!profileDetails?.languages?.length ? (
+                      <p style={{ color: "#9ca3af", fontSize: "13px", margin: 0 }}>No language records.</p>
+                    ) : (
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                          <thead>
+                            <tr style={{ background: "#f8f9fa" }}>
+                              {["Language", "Reading", "Writing", "Speaking", "Listening"].map(h => (
+                                <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontWeight: "700", color: "#6b7280", borderBottom: "1px solid #e5e7eb", fontSize: "11px" }}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {profileDetails.languages.map((l, i) => (
+                              <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                <td style={{ padding: "9px 12px", fontWeight: "600", color: "#1f2937" }}>{l.language || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{l.reading || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{l.writing || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{l.speaking || "—"}</td>
+                                <td style={{ padding: "9px 12px", color: "#4b5563" }}>{l.listening || "—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </ProfileSection>
+
+                  {/* Documents */}
+                  <ProfileSection title="📄 Uploaded Documents" color="#374151">
+                    {!profileDetails?.documents?.length ? (
+                      <p style={{ color: "#9ca3af", fontSize: "13px", margin: 0 }}>No documents uploaded.</p>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                        {profileDetails.documents.map((doc, i) => (
+                          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#f8f9fa", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                              <span style={{ fontSize: "22px" }}>
+                                {(doc.fileType || "").includes("pdf") ? "📕" : (doc.fileType || "").includes("word") || (doc.fileName || "").endsWith(".docx") ? "📘" : "📄"}
+                              </span>
+                              <div>
+                                <p style={{ margin: 0, fontSize: "13px", fontWeight: "600", color: "#1f2937" }}>{doc.fileName || `Document ${i + 1}`}</p>
+                                <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#9ca3af" }}>
+                                  {doc.documentType && <span style={{ background: "#fef3c7", color: "#92400e", padding: "1px 6px", borderRadius: "4px", marginRight: "6px", fontWeight: "600" }}>{doc.documentType}</span>}
+                                  {doc.fileType || ""}
+                                </p>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: "8px" }}>
+                              <a href={`${API}/public/applicant/document/${doc.id}/download`}
+                                download={doc.fileName} target="_blank" rel="noopener noreferrer"
+                                style={{ padding: "5px 12px", background: "#dbeafe", color: "#1d4ed8", border: "1px solid #93c5fd", borderRadius: "6px", textDecoration: "none", fontSize: "12px", fontWeight: "600" }}>
+                                ⬇ Download
+                              </a>
+                              <a href={`${API}/public/applicant/document/${doc.id}/download?view=true`}
+                                target="_blank" rel="noopener noreferrer"
+                                style={{ padding: "5px 12px", background: "#d1fae5", color: "#065f46", border: "1px solid #a7f3d0", borderRadius: "6px", textDecoration: "none", fontSize: "12px", fontWeight: "600" }}>
+                                👁 View
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </ProfileSection>
+
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* APPLY FORM — only shown when a job is selected */}
+          {activePage === "apply" && selectedJobId && (
             <Suspense fallback={<div style={{ textAlign: "center", padding: "60px", color: "#7f8c8d" }}>Loading...</div>}>
-              <ApplyForm key={selectedJobId || "no-job"} jobIdOverride={selectedJobId} />
+              <div style={{ padding: "16px 32px 0" }}>
+                <button onClick={() => setSelectedJobId(null)}
+                  style={{ background: "none", border: "none", color: "#3b82f6", fontSize: "13px", fontWeight: "600", cursor: "pointer", padding: 0 }}>
+                  ← Back to My Profile
+                </button>
+              </div>
+              <ApplyForm key={selectedJobId} jobIdOverride={selectedJobId} />
             </Suspense>
           )}
 
@@ -880,6 +1164,20 @@ export default function ApplyPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Helper component for profile sections
+function ProfileSection({ title, color, children }) {
+  return (
+    <div style={{ background: "white", borderRadius: "10px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #f3f4f6", overflow: "hidden" }}>
+      <div style={{ background: color, padding: "10px 18px" }}>
+        <span style={{ color: "white", fontWeight: "700", fontSize: "13px", letterSpacing: "0.3px" }}>{title}</span>
+      </div>
+      <div style={{ padding: "16px 18px" }}>
+        {children}
+      </div>
     </div>
   );
 }

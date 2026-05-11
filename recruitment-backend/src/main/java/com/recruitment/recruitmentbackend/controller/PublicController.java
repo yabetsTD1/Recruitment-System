@@ -634,10 +634,23 @@ public class PublicController {
     }
 
     @GetMapping("/applicant/document/{id}/download")
-    public ResponseEntity<byte[]> downloadDocument(@PathVariable Integer id) {
+    public ResponseEntity<byte[]> downloadDocument(
+            @PathVariable Integer id,
+            @org.springframework.web.bind.annotation.RequestParam(value = "view", required = false, defaultValue = "false") boolean view) {
         return documentRepository.findById(id).map(d -> {
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-            headers.setContentDispositionFormData("attachment", d.getFileName() != null ? d.getFileName() : "document");
+            
+            // For view mode with PDFs, use inline disposition; otherwise use attachment
+            if (view && d.getFileType() != null && d.getFileType().toLowerCase().contains("pdf")) {
+                headers.setContentDisposition(
+                    org.springframework.http.ContentDisposition.inline()
+                        .filename(d.getFileName() != null ? d.getFileName() : "document.pdf")
+                        .build()
+                );
+            } else {
+                headers.setContentDispositionFormData("attachment", d.getFileName() != null ? d.getFileName() : "document");
+            }
+            
             headers.setContentType(d.getFileType() != null
                 ? org.springframework.http.MediaType.parseMediaType(d.getFileType())
                 : org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);

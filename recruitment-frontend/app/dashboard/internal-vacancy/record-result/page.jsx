@@ -9,15 +9,18 @@ export default function RecordResultPage() {
   const [searching, setSearching] = useState(false);
   const [dropOpen, setDropOpen] = useState(false);
   const [candidates, setCandidates] = useState([]);
+  const [criteria, setCriteria] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [scores, setScores] = useState({ writtenScore: "", interviewScore: "", practicalScore: "" });
+  const [editing, setEditing] = useState(null); // candidate id being edited
+  const [scores, setScores] = useState({}); // { [criteriaId]: value }
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const t = setTimeout(() => {
       setSearching(true);
-      api.get(recSearch.trim() ? `/recruitments/vacancy-posts?search=${encodeURIComponent(recSearch)}` : "/recruitments/vacancy-posts")
+      api.get(recSearch.trim() ? `/recruitments/internal-jobs?search=${encodeURIComponent(recSearch)}` : "/recruitments/internal-jobs")
         .then(r => setRecruitments(r.data))
         .catch(() => setRecruitments([]))
         .finally(() => setSearching(false));
@@ -25,41 +28,74 @@ export default function RecordResultPage() {
     return () => clearTimeout(t);
   }, [recSearch]);
 
-  const selectRec = (r) => {
+  const selectRec = async (r) => {
     setSelectedRec(r);
     setRecSearch("");
     setDropOpen(false);
     setEditing(null);
     setLoading(true);
-    api.get("/recruitments/internal-applications")
-      .then(res => setCandidates(res.data.filter(a => String(a.recruitmentId) === String(r.id) && ["SUBMITTED", "UNDER_REVIEW", "SHORTLISTED"].includes(a.status))))
-      .catch(() => setCandidates([]))
-      .finally(() => setLoading(false));
+    setError("");
+    try {
+      const [appsRes, criteriaRes] = await Promise.all([
+        api.get(`/recruitments/${r.id}/applications`),
+        api.get(`/recruitments/${r.id}/criteria`),
+      ]);
+      setCandidates(appsRes.data.filter(a => ["SUBMITTED", "UNDER_REVIEW", "SHORTLISTED"].includes(a.status)));
+      // Only show EXAM criteria registered for this recruitment
+      setCriteria(criteriaRes.data.filter(c => c.criteriaType === "EXAM"));
+    } catch {
+      setCandidates([]);
+      setCriteria([]);
+      setError("Failed to load data.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const openEdit = (c) => {
     setEditing(c.id);
-    setScores({ writtenScore: c.writtenScore ?? "", interviewScore: c.interviewScore ?? "", practicalScore: c.practicalScore ?? "" });
+    // Pre-fill existing scores if any
+    const existing = {};
+    criteria.forEach(cr => {
+      existing[cr.id] = "";
+    });
+    setScores(existing);
+    setError("");
   };
 
-  const saveScores = async (id) => {
+  const calculateTotal = () => {
+    let totalWeight = 0;
+    let weightedSum = 0;
+    criteria.forEach(cr => {
+      const score = parseFloat(scores[cr.id]) || 0;
+      const weight = parseFloat(cr.weight) || 0;
+      weightedSum += score * weight;
+      totalWeight += weight;
+    });
+    return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+  };
+
+  const saveScores = async (appId) => {
+    const allFilled = criteria.every(cr => scores[cr.id] !== "" && scores[cr.id] !== undefined);
+    if (!allFilled) { setError("Please fill in all criteria scores."); return; }
+
     setSaving(true);
+    setError("");
     try {
-      const res = await api.put(`/recruitments/applications/${id}/scores`, {
-        writtenScore: scores.writtenScore !== "" ? Number(scores.writtenScore) : null,
-        interviewScore: scores.interviewScore !== "" ? Number(scores.interviewScore) : null,
-        practicalScore: scores.practicalScore !== "" ? Number(scores.practicalScore) : null,
+      const total = calculateTotal();
+      await api.put(`/recruitments/applications/${appId}/scores`, {
+        examScores: JSON.stringify(scores),
+        totalScore: total,
       });
-      setCandidates(prev => prev.map(c => c.id === id ? {
-        ...c,
-        writtenScore: scores.writtenScore !== "" ? Number(scores.writtenScore) : null,
-        interviewScore: scores.interviewScore !== "" ? Number(scores.interviewScore) : null,
-        practicalScore: scores.practicalScore !== "" ? Number(scores.practicalScore) : null,
-        totalScore: res.data.totalScore,
-      } : c));
+      setCandidates(prev => prev.map(c => c.id === appId ? { ...c, totalScore: total, examScores: scores } : c));
       setEditing(null);
-    } catch (e) { alert("Failed to save scores."); }
-    finally { setSaving(false); }
+      setSuccess("Scores saved successfully.");
+      setTimeout(() => setSuccess(""), 4000);
+    } catch {
+      setError("Failed to save scores.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const scored = candidates.filter(c => c.totalScore !== null && c.totalScore !== undefined);
@@ -68,15 +104,25 @@ export default function RecordResultPage() {
     <div>
       <div style={{ marginBottom: "20px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#2c3e50", margin: 0 }}>Record Result</h1>
-        <p style={{ color: "#7f8c8d", fontSize: "13px", margin: "4px 0 0 0" }}>Enter exam and interview scores for a specific recruitment</p>
+        <p style={{ color: "#7f8c8d", fontSize: "13px", margin: "4px 0 0 0" }}>Enter exam scores for internal vacancy candidates</p>
       </div>
+
+      {error && (
+        <div style={{ background: "#fee2e2", color: "#b91c1c", padding: "10px 16px", borderRadius: "8px", marginBottom: "16px", fontSize: "13px" }}>
+          {error}
+          <button onClick={() => setError("")} style={{ float: "right", background: "none", border: "none", cursor: "pointer", color: "#b91c1c", fontWeight: "700" }}>×</button>
+        </div>
+      )}
+      {success && (
+        <div style={{ background: "#d1fae5", color: "#065f46", padding: "10px 16px", borderRadius: "8px", marginBottom: "16px", fontSize: "13px" }}>{success}</div>
+      )}
 
       {/* Recruitment Selector */}
       <div style={{ background: "white", borderRadius: "8px", padding: "16px 20px", marginBottom: "20px", border: "1px solid #ecf0f1", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
         <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#5d6d7e", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Select Recruitment</label>
         <input value={recSearch} onChange={e => setRecSearch(e.target.value)}
           onFocus={() => setDropOpen(true)} onBlur={() => setTimeout(() => setDropOpen(false), 150)}
-          placeholder="Click or type to search recruitments..."
+          placeholder="Click or type to search internal recruitments..."
           style={{ width: "100%", padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "13px", marginBottom: "8px", boxSizing: "border-box" }} />
         {dropOpen && (
           <div style={{ border: "1px solid #d1d5db", borderRadius: "6px", maxHeight: "200px", overflowY: "auto", background: "white" }}>
@@ -89,7 +135,6 @@ export default function RecordResultPage() {
                   onMouseLeave={e => e.currentTarget.style.background = "white"}>
                   <span style={{ fontWeight: "600", color: "#2c3e50" }}>{r.jobTitle}</span>
                   <span style={{ color: "#9ca3af", marginLeft: "8px" }}>{r.batchCode}</span>
-                  <span style={{ color: "#9ca3af", marginLeft: "8px", fontSize: "11px" }}>({r.status})</span>
                 </div>
               ))}
           </div>
@@ -98,7 +143,7 @@ export default function RecordResultPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px", padding: "8px 12px", background: "#f0f9ff", borderRadius: "6px", border: "1px solid #bae6fd" }}>
             <span style={{ fontSize: "13px", fontWeight: "600", color: "#0369a1" }}>{selectedRec.jobTitle}</span>
             <span style={{ fontSize: "12px", color: "#7f8c8d" }}>{selectedRec.batchCode}</span>
-            <button onMouseDown={() => { setSelectedRec(null); setCandidates([]); setEditing(null); }}
+            <button onMouseDown={() => { setSelectedRec(null); setCandidates([]); setCriteria([]); setEditing(null); }}
               style={{ marginLeft: "auto", background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "16px" }}>×</button>
           </div>
         )}
@@ -107,6 +152,12 @@ export default function RecordResultPage() {
       {!selectedRec ? (
         <div style={{ background: "white", borderRadius: "8px", padding: "60px", textAlign: "center", color: "#7f8c8d", border: "1px solid #ecf0f1" }}>
           <p style={{ fontSize: "15px", margin: 0 }}>Select a recruitment above to record scores.</p>
+        </div>
+      ) : loading ? (
+        <p style={{ textAlign: "center", color: "#7f8c8d", padding: "32px" }}>Loading...</p>
+      ) : criteria.length === 0 ? (
+        <div style={{ background: "#fef3c7", borderRadius: "8px", padding: "24px", textAlign: "center", color: "#92400e", border: "1px solid #fde68a" }}>
+          <p style={{ fontSize: "14px", margin: 0 }}>⚠ No exam criteria registered for this recruitment. Please go to <strong>Record Criteria</strong> first.</p>
         </div>
       ) : (
         <>
@@ -123,9 +174,7 @@ export default function RecordResultPage() {
             ))}
           </div>
 
-          {loading ? (
-            <p style={{ textAlign: "center", color: "#7f8c8d", padding: "32px" }}>Loading...</p>
-          ) : candidates.length === 0 ? (
+          {candidates.length === 0 ? (
             <div style={{ background: "white", borderRadius: "8px", padding: "40px", textAlign: "center", color: "#7f8c8d", border: "1px solid #ecf0f1" }}>
               No candidates available for scoring in this recruitment.
             </div>
@@ -142,16 +191,17 @@ export default function RecordResultPage() {
                       {c.totalScore !== null && c.totalScore !== undefined && (
                         <div style={{ textAlign: "center" }}>
                           <p style={{ fontSize: "22px", fontWeight: "700", color: c.totalScore >= 60 ? "#27ae60" : "#e74c3c", margin: 0 }}>{c.totalScore}</p>
-                          <p style={{ fontSize: "11px", color: "#7f8c8d", margin: 0 }}>Avg</p>
+                          <p style={{ fontSize: "11px", color: "#7f8c8d", margin: 0 }}>Total</p>
                         </div>
                       )}
-                      <button onClick={() => editing === c.id ? saveScores(c.id) : openEdit(c)}
+                      <button
+                        onClick={() => editing === c.id ? saveScores(c.id) : openEdit(c)}
                         disabled={saving && editing === c.id}
                         style={{ padding: "7px 16px", background: editing === c.id ? "#27ae60" : "#2980b9", color: "white", border: "none", borderRadius: "5px", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}>
-                        {editing === c.id ? (saving ? "Saving..." : "Save") : "Enter Scores"}
+                        {editing === c.id ? (saving ? "Saving..." : "Save") : "Enter Score"}
                       </button>
                       {editing === c.id && (
-                        <button onClick={() => setEditing(null)}
+                        <button onClick={() => { setEditing(null); setError(""); }}
                           style={{ padding: "7px 12px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: "5px", cursor: "pointer", fontWeight: "600", fontSize: "13px" }}>
                           Cancel
                         </button>
@@ -159,31 +209,45 @@ export default function RecordResultPage() {
                     </div>
                   </div>
 
+                  {/* Score inputs — one per registered criteria */}
                   {editing === c.id && (
-                    <div style={{ marginTop: "16px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", paddingTop: "16px", borderTop: "1px solid #f0f3f4" }}>
-                      {[
-                        { label: "Written Exam (0-100)", key: "writtenScore" },
-                        { label: "Interview (0-100)", key: "interviewScore" },
-                        { label: "Practical (0-100)", key: "practicalScore" },
-                      ].map(f => (
-                        <div key={f.key}>
-                          <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>{f.label}</label>
-                          <input type="number" min="0" max="100" value={scores[f.key]}
-                            onChange={e => setScores({ ...scores, [f.key]: e.target.value })}
-                            style={{ width: "100%", padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: "5px", fontSize: "13px", outline: "none", boxSizing: "border-box" }} />
-                        </div>
-                      ))}
+                    <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #f0f3f4" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "12px" }}>
+                        {criteria.map(cr => (
+                          <div key={cr.id}>
+                            <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>
+                              {cr.criteriaName}
+                              <span style={{ color: "#9ca3af", fontWeight: "400", marginLeft: "4px" }}>({cr.weight}%)</span>
+                            </label>
+                            <input
+                              type="number" min="0" max="100"
+                              placeholder="0 – 100"
+                              value={scores[cr.id] ?? ""}
+                              onChange={e => setScores(prev => ({ ...prev, [cr.id]: e.target.value }))}
+                              style={{ width: "100%", padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: "5px", fontSize: "13px", outline: "none", boxSizing: "border-box" }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      {/* Live total preview */}
+                      <div style={{ marginTop: "12px", padding: "8px 12px", background: "#f8f9fa", borderRadius: "6px", fontSize: "13px", color: "#374151" }}>
+                        Weighted Total: <strong style={{ color: calculateTotal() >= 60 ? "#27ae60" : "#e74c3c" }}>{calculateTotal()}</strong>
+                      </div>
                     </div>
                   )}
 
+                  {/* Show saved scores */}
                   {c.totalScore !== null && c.totalScore !== undefined && editing !== c.id && (
-                    <div style={{ marginTop: "12px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", paddingTop: "12px", borderTop: "1px solid #f0f3f4" }}>
-                      {[{ label: "Written", value: c.writtenScore }, { label: "Interview", value: c.interviewScore }, { label: "Practical", value: c.practicalScore }].map(s => (
-                        <div key={s.label} style={{ background: "#f8f9fa", borderRadius: "6px", padding: "10px", textAlign: "center" }}>
-                          <p style={{ fontSize: "20px", fontWeight: "700", color: "#2c3e50", margin: 0 }}>{s.value ?? "—"}</p>
-                          <p style={{ fontSize: "11px", color: "#7f8c8d", margin: 0 }}>{s.label}</p>
-                        </div>
-                      ))}
+                    <div style={{ marginTop: "12px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: "10px", paddingTop: "12px", borderTop: "1px solid #f0f3f4" }}>
+                      {criteria.map(cr => {
+                        const savedScores = c.examScores ? (typeof c.examScores === "string" ? JSON.parse(c.examScores) : c.examScores) : {};
+                        return (
+                          <div key={cr.id} style={{ background: "#f8f9fa", borderRadius: "6px", padding: "10px", textAlign: "center" }}>
+                            <p style={{ fontSize: "18px", fontWeight: "700", color: "#2c3e50", margin: 0 }}>{savedScores[cr.id] ?? "—"}</p>
+                            <p style={{ fontSize: "11px", color: "#7f8c8d", margin: "2px 0 0 0" }}>{cr.criteriaName}</p>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

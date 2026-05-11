@@ -49,7 +49,7 @@ export default function RegisterJobsPage() {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [filterJobType, setFilterJobType] = useState("");
-  const [filterClass, setFilterClass] = useState("");
+  const [filterIcf, setFilterIcf] = useState("");
   const [msg, setMsg] = useState(null);
   const [jobTypeSearch, setJobTypeSearch] = useState("");
   const [showJobTypeDropdown, setShowJobTypeDropdown] = useState(false);
@@ -106,6 +106,20 @@ export default function RegisterJobsPage() {
   }, []);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Only leaf job types (those with no children) can have jobs registered under them
+  const leafJobTypes = jobTypes.filter(jt => !jobTypes.some(other => other.parentId === jt.id));
+
+  // Build full path label for a job type: "Root > Parent > Leaf"
+  const getJobTypePath = (jtId) => {
+    const path = [];
+    let current = jobTypes.find(t => String(t.id) === String(jtId));
+    while (current) {
+      path.unshift(current.name);
+      current = current.parentId ? jobTypes.find(t => t.id === current.parentId) : null;
+    }
+    return path.join(" › ");
+  };
 
   // When job type selected, auto-set name = job type name
   const handleJobTypeChange = (jtId) => {
@@ -207,7 +221,7 @@ export default function RegisterJobsPage() {
   const filtered = jobs.filter(
     (j) =>
       (!filterJobType || String(j.jobTypeId) === String(filterJobType)) &&
-      (!filterClass || j.classCode === filterClass),
+      (!filterIcf || j.icf === filterIcf),
   );
   const displayedJobs = showAll ? filtered : filtered.slice(-5).reverse();
   const hasMore = filtered.length > 5;
@@ -304,8 +318,8 @@ export default function RegisterJobsPage() {
             color: "#2980b9",
           },
           {
-            label: "Classes Used",
-            value: new Set(jobs.map((j) => j.classCode).filter(Boolean)).size,
+            label: "ICF Used",
+            value: new Set(jobs.map((j) => j.icf).filter(Boolean)).size,
             color: "#8e44ad",
           },
         ].map((s, i) => (
@@ -369,9 +383,9 @@ export default function RegisterJobsPage() {
             style={inp}
           >
             <option value="">All Jobs</option>
-            {jobTypes.map((t) => (
+            {leafJobTypes.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name}
+                {getJobTypePath(t.id)}
               </option>
             ))}
           </select>
@@ -387,26 +401,26 @@ export default function RegisterJobsPage() {
               textTransform: "uppercase",
             }}
           >
-            Class
+            INSA Competency Framework (ICF)
           </label>
           <select
-            value={filterClass}
-            onChange={(e) => setFilterClass(e.target.value)}
+            value={filterIcf}
+            onChange={(e) => setFilterIcf(e.target.value)}
             style={inp}
           >
-            <option value="">All Classes</option>
-            {CLASS_OPTIONS.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            <option value="">All</option>
+            {ICF_OPTIONS.map((i) => (
+              <option key={i} value={i}>
+                 {i}
               </option>
             ))}
           </select>
         </div>
-        {(filterJobType || filterClass) && (
+        {(filterJobType || filterIcf) && (
           <button
             onClick={() => {
               setFilterJobType("");
-              setFilterClass("");
+              setFilterIcf("");
             }}
             style={{
               padding: "9px 14px",
@@ -675,19 +689,22 @@ export default function RegisterJobsPage() {
                   <span style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af", pointerEvents: "none" }}>▾</span>
                   {showJobTypeDropdown && (
                     <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "white", border: "1px solid #d1d5db", borderRadius: "6px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", zIndex: 100, maxHeight: "200px", overflowY: "auto" }}>
-                      {jobTypes
-                        .filter(t => t.name.toLowerCase().includes(jobTypeSearch.toLowerCase()))
+                      {leafJobTypes
+                        .filter(t => getJobTypePath(t.id).toLowerCase().includes(jobTypeSearch.toLowerCase()))
                         .map(t => (
                           <div key={t.id}
-                            onClick={() => { set("jobTypeId", String(t.id)); setJobTypeSearch(t.name); setShowJobTypeDropdown(false); }}
+                            onMouseDown={e => { e.preventDefault(); set("jobTypeId", String(t.id)); setJobTypeSearch(t.name); setShowJobTypeDropdown(false); }}
                             style={{ padding: "9px 12px", fontSize: "13px", cursor: "pointer", borderBottom: "1px solid #f3f4f6", color: String(form.jobTypeId) === String(t.id) ? "#2980b9" : "#1f2937", fontWeight: String(form.jobTypeId) === String(t.id) ? "700" : "400", background: String(form.jobTypeId) === String(t.id) ? "#eaf4fb" : "white" }}
                             onMouseEnter={e => e.currentTarget.style.background = "#f8f9fa"}
                             onMouseLeave={e => e.currentTarget.style.background = String(form.jobTypeId) === String(t.id) ? "#eaf4fb" : "white"}
                           >
-                            {t.name}
+                            <div style={{ fontWeight: "600", color: String(form.jobTypeId) === String(t.id) ? "#2980b9" : "#1f2937" }}>{t.name}</div>
+                            {getJobTypePath(t.id) !== t.name && (
+                              <div style={{ fontSize: "11px", color: "#9ca3af", marginTop: "2px" }}>{getJobTypePath(t.id)}</div>
+                            )}
                           </div>
                         ))}
-                      {jobTypes.filter(t => t.name.toLowerCase().includes(jobTypeSearch.toLowerCase())).length === 0 && (
+                      {leafJobTypes.filter(t => getJobTypePath(t.id).toLowerCase().includes(jobTypeSearch.toLowerCase())).length === 0 && (
                         <div style={{ padding: "9px 12px", fontSize: "13px", color: "#9ca3af" }}>No results found</div>
                       )}
                     </div>

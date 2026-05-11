@@ -7,7 +7,7 @@ const ICF_OPTIONS   = Array.from({ length: 15 }, (_, i) => String(i + 1));
 const EDU_CATS      = ["Natural Science", "Social Science", "Engineering", "Health Science", "Law", "Business", "Arts", "Other"];
 const EDU_LEVELS    = ["Certificate", "Diploma", "BSc / BA", "MSc / MA", "PhD", "Other"];
 
-const EMPTY_JQ  = { registeredJobId: "", jobTypeId: "", jobFamilyName: "", jobTitle: "", grade: "", competencyFramework: "", status: "ACTIVE" };
+const EMPTY_JQ  = { registeredJobId: "", jobTypeId: "", jobFamilyName: "", jobTitle: "", grade: "", icf: "", competencyFramework: "", status: "ACTIVE" };
 const EMPTY_ENT = { educationCategory: "", educationLevel: "", fieldOfStudy: "", minExperience: "0", skill: "", knowledge: "", competency: "" };
 
 const inp = { width: "100%", padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "13px", outline: "none", boxSizing: "border-box", background: "white" };
@@ -76,17 +76,16 @@ function JobQualificationContent() {
     if (rj) {
       setJ("jobTitle", rj.name);
       setJ("grade", rj.classCode || "");
+      setJ("icf", rj.icf || "");
       // Job Family = parent of the job type (if exists), else the job type itself
       if (rj.jobTypeId) {
         const jt = jobTypes.find(t => String(t.id) === String(rj.jobTypeId));
         if (jt) {
           if (jt.parentId) {
-            // has a parent — use parent as the family
             const parent = jobTypes.find(t => String(t.id) === String(jt.parentId));
             setJ("jobTypeId", parent ? String(parent.id) : String(jt.id));
             setJ("jobFamilyName", parent ? parent.name : jt.name);
           } else {
-            // no parent — this IS the root family
             setJ("jobTypeId", String(jt.id));
             setJ("jobFamilyName", jt.name);
           }
@@ -115,6 +114,7 @@ function JobQualificationContent() {
       jobFamilyName: familyName,
       jobTitle: jq.jobTitle,
       grade: rj?.classCode || jq.grade || "",
+      icf: rj?.icf || jq.icf || "",
       competencyFramework: jq.competencyFramework || "",
       status: jq.status,
     });
@@ -218,14 +218,18 @@ function JobQualificationContent() {
           <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#7f8c8d", marginBottom: "5px", textTransform: "uppercase" }}>Job Title</label>
           <select value={filterJob} onChange={e => setFilterJob(e.target.value)} style={inp}>
             <option value="">All Jobs</option>
-            {registeredJobs.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
+            {registeredJobs
+              .filter((j, idx, arr) => arr.findIndex(x => x.name === j.name) === idx)
+              .map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
           </select>
         </div>
         <div style={{ flex: 1, minWidth: "140px" }}>
           <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#7f8c8d", marginBottom: "5px", textTransform: "uppercase" }}>ICF (Competency Framework)</label>
           <select value={filterIcf} onChange={e => setFilterIcf(e.target.value)} style={inp}>
             <option value="">All</option>
-            {ICF_OPTIONS.map(i => <option key={i} value={i}>{i}</option>)}
+            {[...new Set(registeredJobs.map(j => j.icf).filter(Boolean))].sort((a, b) => Number(a) - Number(b)).map(i => (
+              <option key={i} value={i}> {i}</option>
+            ))}
           </select>
         </div>
         {(filterJob || filterIcf) && (
@@ -249,7 +253,7 @@ function JobQualificationContent() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead style={{ background: "linear-gradient(135deg, #f8fafc, #f1f5f9)" }}>
               <tr>
-                {["#", "Job Title", "Job Type", "Class", "Status", "Actions"].map(h => (
+                {["#", "Job Title", "Job Type", "Class", "ICF", "Status", "Actions"].map(h => (
                   <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: "12px", fontWeight: "600", color: "#374151", borderBottom: "1px solid #e5e7eb" }}>{h}</th>
                 ))}
               </tr>
@@ -265,6 +269,11 @@ function JobQualificationContent() {
                     {jq.jobTypeName ? <span style={{ background: "#eaf4fb", color: "#2980b9", padding: "2px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: "600" }}>{jq.jobTypeName}</span> : <span style={{ color: "#9ca3af" }}>—</span>}
                   </td>
                   <td style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "700", color: "#8e44ad" }}>{jq.grade || "—"}</td>
+                  <td style={{ padding: "12px 16px" }}>
+                    {jq.icf ? (
+                      <span style={{ background: "#e0f2fe", color: "#0369a1", padding: "3px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: "700" }}>ICF {jq.icf}</span>
+                    ) : <span style={{ color: "#9ca3af", fontSize: "12px" }}>—</span>}
+                  </td>
                   <td style={{ padding: "12px 16px" }}><span style={statusBadge(jq.status)}>{jq.status}</span></td>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ display: "flex", gap: "6px" }}>
@@ -376,7 +385,9 @@ function JobQualificationContent() {
                 <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>Job Title <span style={{ color: "#e74c3c" }}>*</span></label>
                 <select required value={jqForm.registeredJobId} onChange={e => handleJobChange(e.target.value)} style={inp}>
                   <option value="">-- Select Job --</option>
-                  {registeredJobs.map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
+                  {registeredJobs
+                    .filter((j, idx, arr) => arr.findIndex(x => x.name === j.name) === idx)
+                    .map(j => <option key={j.id} value={j.id}>{j.name}</option>)}
                 </select>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
@@ -392,6 +403,23 @@ function JobQualificationContent() {
                     {jqForm.grade || "— auto-filled from Job —"}
                   </div>
                 </div>
+              </div>
+              <div style={{ marginBottom: "14px" }}>
+                <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>
+                  INSA Competency Framework (ICF)
+                </label>
+                <select value={jqForm.icf} onChange={e => setJ("icf", e.target.value)} style={inp}>
+                  <option value="">-- Select ICF --</option>
+                  {(() => {
+                    // Get the selected job's name, then find all registered jobs with that same name
+                    const selectedJob = registeredJobs.find(j => String(j.id) === String(jqForm.registeredJobId));
+                    const jobsWithSameName = selectedJob
+                      ? registeredJobs.filter(j => j.name === selectedJob.name && j.icf)
+                      : registeredJobs.filter(j => j.icf);
+                    const uniqueIcfs = [...new Set(jobsWithSameName.map(j => j.icf))].sort((a, b) => Number(a) - Number(b));
+                    return uniqueIcfs.map(i => <option key={i} value={i}> {i}</option>);
+                  })()}
+                </select>
               </div>
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>Status</label>

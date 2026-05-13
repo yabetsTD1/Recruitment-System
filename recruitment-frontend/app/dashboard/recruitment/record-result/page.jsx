@@ -25,6 +25,7 @@ export default function RecordResultPage() {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [selectedCriteria, setSelectedCriteria] = useState(null);
   const [resultScore, setResultScore] = useState("");
+  const [criteriaScores, setCriteriaScores] = useState({});
   const [recording, setRecording] = useState(false);
   
   // Overall status management
@@ -37,8 +38,8 @@ export default function RecordResultPage() {
   useEffect(() => {
     const t = setTimeout(() => {
       setSearching(true);
-      api.get(recSearch.trim() ? `/recruitments?search=${encodeURIComponent(recSearch)}` : "/recruitments")
-        .then(r => setRecruitments(r.data.filter(rec => ["POSTED", "APPROVED", "CLOSED"].includes(rec.status))))
+      api.get(recSearch.trim() ? `/recruitments/external-vacancy-posts?search=${encodeURIComponent(recSearch)}` : "/recruitments/external-vacancy-posts")
+        .then(r => setRecruitments(r.data))
         .catch(() => setRecruitments([]))
         .finally(() => setSearching(false));
     }, recSearch.trim() ? 300 : 0);
@@ -111,36 +112,62 @@ export default function RecordResultPage() {
     setSelectedCandidate(null);
     setSelectedCriteria(null);
     setResultScore("");
+    setCriteriaScores({});
   };
 
   const selectCandidate = (app) => {
     setSelectedCandidate(app);
     setCandidateSearch("");
     setFilteredCandidates([]);
+    // Pre-fill existing scores for this candidate
+    const existing = {};
+    examCriteria.forEach(c => {
+      const r = examResults.find(er => er.applicationId === app.id && er.criteriaId === c.id);
+      if (r) existing[c.id] = String(r.resultScore);
+    });
+    setCriteriaScores(existing);
   };
 
   const recordResult = () => {
-    if (!selectedCandidate || !selectedCriteria || !resultScore) {
-      setError("Please fill all fields");
+    if (!selectedCandidate) {
+      setError("Please select a candidate");
       return;
     }
 
-    const score = parseFloat(resultScore);
-    const maxScore = selectedCriteria?.weight ?? 100;
-    if (isNaN(score) || score < 0 || score > maxScore) {
-      setError(`Score must be between 0 and ${maxScore}`);
+    // Validate all criteria have scores
+    const missing = examCriteria.filter(c => !criteriaScores[c.id] && criteriaScores[c.id] !== 0);
+    if (missing.length > 0) {
+      setError(`Please fill scores for: ${missing.map(c => c.criteriaName).join(", ")}`);
       return;
+    }
+
+    // Validate score ranges
+    for (const c of examCriteria) {
+      const s = parseFloat(criteriaScores[c.id]);
+      if (isNaN(s) || s < 0 || s > (c.weight ?? 100)) {
+        setError(`Score for "${c.criteriaName}" must be between 0 and ${c.weight ?? 100}`);
+        return;
+      }
     }
 
     setRecording(true);
-    api.post("/recruitments/exam-results", {
-      applicationId: selectedCandidate.id,
-      criteriaId: selectedCriteria.id,
-      resultScore: score,
-    })
+    setError("");
+
+    // Submit all criteria scores sequentially
+    const submissions = examCriteria.map(c => {
+      const score = parseFloat(criteriaScores[c.id]);
+      const computedStatus = score >= ((c.weight ?? 100) * passMark / 100) ? "PASS" : "FAIL";
+      return api.post("/recruitments/exam-results", {
+        applicationId: selectedCandidate.id,
+        criteriaId: c.id,
+        resultScore: score,
+        status: computedStatus,
+      });
+    });
+
+    Promise.all(submissions)
       .then(() => {
-        setSuccess(`Result recorded for ${selectedCandidate.applicantName}`);
-        // Refresh exam results
+        setSuccess(`All results recorded for ${selectedCandidate.applicantName}`);
         return api.get(`/recruitments/${selectedRec.id}/exam-results`);
       })
       .then(res => {
@@ -148,7 +175,10 @@ export default function RecordResultPage() {
         closeRecordModal();
         setTimeout(() => setSuccess(""), 5000);
       })
-      .catch(() => setError("Failed to record result"))
+      .catch(e => {
+        const msg = e?.response?.data?.message;
+        setError(msg || "Failed to record result");
+      })
       .finally(() => setRecording(false));
   };
 
@@ -353,7 +383,7 @@ export default function RecordResultPage() {
                   </th>
                 ))}
                 <th style={{ padding: "14px 20px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "#374151" }}>Weighted Total</th>
-                <th style={{ padding: "14px 20px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "#374151" }}>Final Status</th>
+                <th style={{ padding: "14px 20px", textAlign: "center", fontSize: "13px", fontWeight: "600", color: "#374151" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -378,22 +408,18 @@ export default function RecordResultPage() {
                       {weightedTotal !== null ? weightedTotal.toFixed(2) : "—"}
                     </td>
                     <td style={{ padding: "14px 20px", textAlign: "center" }}>
-                      {finalStatus ? (
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                          <span style={{ padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: "600", ...(statusColor[finalStatus] || {}) }}>
-                            {finalStatus}
-                          </span>
-                          <button onClick={() => openStatusModal(app)}
-                            style={{ padding: "4px 12px", background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "11px", fontWeight: "600", cursor: "pointer" }}>
-                            Set Status
-                          </button>
-                        </div>
-                      ) : (
-                        <button onClick={() => openStatusModal(app)}
-                          style={{ padding: "4px 12px", background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "11px", fontWeight: "600", cursor: "pointer" }}>
-                          Set Status
-                        </button>
-                      )}
+                      <button
+                        onClick={() => {
+                          setCandidateSearch("");
+                          setFilteredCandidates(applications);
+                          selectCandidate(app);
+                          setShowRecordModal(true);
+                          setError("");
+                          setSuccess("");
+                        }}
+                        style={{ padding: "6px 16px", background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "white", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
+                        Update
+                      </button>
                     </td>
                   </tr>
                 );
@@ -407,25 +433,28 @@ export default function RecordResultPage() {
       {/* Record Result Modal */}
       {showRecordModal && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div style={{ background: "white", borderRadius: "16px", width: "90%", maxWidth: "600px", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
-            <div style={{ padding: "24px", borderBottom: "1px solid #f3f4f6" }}>
+          <div style={{ background: "white", borderRadius: "16px", width: "90%", maxWidth: "640px", maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#1f2937", margin: 0 }}>Record Exam Result</h2>
+              <button onClick={closeRecordModal} style={{ background: "none", border: "none", fontSize: "22px", color: "#9ca3af", cursor: "pointer", lineHeight: 1 }}>×</button>
             </div>
-            
+
             <div style={{ padding: "24px" }}>
               {/* Candidate Search */}
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>Search Candidate</label>
+              <div style={{ marginBottom: "24px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>
+                  Search Candidate
+                </label>
                 {!selectedCandidate ? (
                   <>
-                    <input 
+                    <input
                       value={candidateSearch}
                       onChange={e => setCandidateSearch(e.target.value)}
-                      placeholder="Type to filter candidates..."
+                      placeholder="Type name to filter candidates..."
                       autoFocus
                       style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", boxSizing: "border-box" }}
                     />
-                    <div style={{ border: "1px solid #d1d5db", borderRadius: "8px", marginTop: "8px", maxHeight: "200px", overflowY: "auto", background: "white" }}>
+                    <div style={{ border: "1px solid #d1d5db", borderRadius: "8px", marginTop: "6px", maxHeight: "180px", overflowY: "auto", background: "white" }}>
                       {filteredCandidates.length === 0 ? (
                         <p style={{ padding: "12px", color: "#9ca3af", fontSize: "13px", margin: 0 }}>No candidates found.</p>
                       ) : filteredCandidates.map(app => (
@@ -440,54 +469,68 @@ export default function RecordResultPage() {
                     </div>
                   </>
                 ) : (
-                  <div style={{ padding: "10px 12px", background: "#f0f9ff", borderRadius: "8px", border: "1px solid #bae6fd", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ padding: "10px 14px", background: "#f0f9ff", borderRadius: "8px", border: "1px solid #bae6fd", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
                       <div style={{ fontSize: "14px", fontWeight: "600", color: "#0369a1" }}>{selectedCandidate.applicantName}</div>
                       <div style={{ fontSize: "12px", color: "#7f8c8d" }}>{selectedCandidate.applicantEmail}</div>
                     </div>
-                    <button onClick={() => { setSelectedCandidate(null); setCandidateSearch(""); setFilteredCandidates(applications); }}
+                    <button onClick={() => { setSelectedCandidate(null); setCandidateSearch(""); setFilteredCandidates(applications); setCriteriaScores({}); }}
                       style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "18px", lineHeight: 1 }}>×</button>
                   </div>
                 )}
               </div>
 
-              {/* Exam Criteria Selection */}
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>Exam Criteria</label>
-                <select 
-                  value={selectedCriteria?.id || ""}
-                  onChange={e => setSelectedCriteria(examCriteria.find(c => c.id === parseInt(e.target.value)))}
-                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", boxSizing: "border-box" }}>
-                  <option value="">Select exam criteria...</option>
-                  {examCriteria.map(c => (
-                    <option key={c.id} value={c.id}>{c.criteriaName} ({c.weight}%)</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Result Score */}
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "8px" }}>
-                  Result Score {selectedCriteria ? `(0 - ${selectedCriteria.weight})` : "(0-100)"}
-                </label>
-                <input 
-                  type="number"
-                  min="0"
-                  max={selectedCriteria ? selectedCriteria.weight : 100}
-                  step="0.01"
-                  value={resultScore}
-                  onChange={e => setResultScore(e.target.value)}
-                  placeholder={selectedCriteria ? `Enter score (max ${selectedCriteria.weight})...` : "Select criteria first..."}
-                  disabled={!selectedCriteria}
-                  style={{ width: "100%", padding: "10px 12px", border: "1px solid #d1d5db", borderRadius: "8px", fontSize: "14px", boxSizing: "border-box", background: selectedCriteria ? "white" : "#f9fafb" }}
-                />
-                {selectedCriteria && resultScore && !isNaN(parseFloat(resultScore)) && (
-                  <p style={{ margin: "6px 0 0 0", fontSize: "12px", color: parseFloat(resultScore) > selectedCriteria.weight ? "#ef4444" : "#6b7280" }}>
-                    {parseFloat(resultScore) > selectedCriteria.weight ? `⚠️ Score exceeds max (${selectedCriteria.weight})` : `Max score for this criteria: ${selectedCriteria.weight}`}
-                  </p>
-                )}
-              </div>
-
+              {/* All Criteria Scores — shown once a candidate is selected */}
+              {selectedCandidate && (
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#374151", marginBottom: "12px" }}>
+                    Exam Scores
+                  </label>
+                  <div style={{ border: "1px solid #e5e7eb", borderRadius: "10px", overflow: "hidden" }}>
+                    {/* Header */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 140px", background: "#f8fafc", padding: "10px 16px", borderBottom: "1px solid #e5e7eb" }}>
+                      <span style={{ fontSize: "12px", fontWeight: "700", color: "#6b7280", textTransform: "uppercase" }}>Criteria</span>
+                      <span style={{ fontSize: "12px", fontWeight: "700", color: "#6b7280", textTransform: "uppercase", textAlign: "center" }}>Score (max)</span>
+                    </div>
+                    {examCriteria.map((c, idx) => {
+                      const val = criteriaScores[c.id] ?? "";
+                      const score = parseFloat(val);
+                      const threshold = (c.weight ?? 100) * passMark / 100;
+                      const status = !isNaN(score) && val !== "" ? (score >= threshold ? "PASS" : "FAIL") : null;
+                      const overMax = !isNaN(score) && score > (c.weight ?? 100);
+                      return (
+                        <div key={c.id} style={{ display: "grid", gridTemplateColumns: "1fr 140px", alignItems: "center", padding: "12px 16px", borderBottom: idx < examCriteria.length - 1 ? "1px solid #f3f4f6" : "none", background: overMax ? "#fff7f7" : "white" }}>
+                          <div>
+                            <div style={{ fontSize: "14px", fontWeight: "600", color: "#1f2937" }}>{c.criteriaName}</div>
+                            <div style={{ fontSize: "11px", color: "#9ca3af" }}>Weight: {c.weight}%</div>
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <input
+                              type="number"
+                              min="0"
+                              max={c.weight ?? 100}
+                              step="0.01"
+                              value={val}
+                              onChange={e => setCriteriaScores(prev => ({ ...prev, [c.id]: e.target.value }))}
+                              placeholder={`0–${c.weight ?? 100}`}
+                              style={{
+                                width: "110px",
+                                padding: "7px 10px",
+                                border: `2px solid ${overMax ? "#ef4444" : "#d1d5db"}`,
+                                borderRadius: "8px",
+                                fontSize: "14px",
+                                textAlign: "center",
+                                outline: "none"
+                              }}
+                            />
+                            {overMax && <div style={{ fontSize: "10px", color: "#ef4444", marginTop: "2px" }}>Exceeds max</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div style={{ padding: "16px 24px", borderTop: "1px solid #f3f4f6", display: "flex", gap: "12px", justifyContent: "flex-end" }}>
@@ -495,9 +538,9 @@ export default function RecordResultPage() {
                 style={{ padding: "10px 20px", background: "#f3f4f6", color: "#6b7280", border: "none", borderRadius: "8px", fontWeight: "600", cursor: "pointer", fontSize: "14px" }}>
                 Cancel
               </button>
-              <button onClick={recordResult} disabled={recording}
-                style={{ padding: "10px 20px", background: recording ? "#9ca3af" : "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white", border: "none", borderRadius: "8px", fontWeight: "600", cursor: recording ? "not-allowed" : "pointer", fontSize: "14px" }}>
-                {recording ? "Recording..." : "Record Result"}
+              <button onClick={recordResult} disabled={recording || !selectedCandidate}
+                style={{ padding: "10px 20px", background: recording || !selectedCandidate ? "#9ca3af" : "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white", border: "none", borderRadius: "8px", fontWeight: "600", cursor: recording || !selectedCandidate ? "not-allowed" : "pointer", fontSize: "14px" }}>
+                {recording ? "Saving..." : "Save All Scores"}
               </button>
             </div>
           </div>

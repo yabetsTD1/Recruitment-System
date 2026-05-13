@@ -33,6 +33,16 @@ const SUPER_ADMIN_MENU = [
     icon: "🏛",
     href: "/dashboard/org-profile",
   },
+  {
+    id: "recruitment",
+    label: "Recruitment",
+    icon: "📋",
+    children: [
+      { label: "Recruitment Request", href: "/dashboard/recruitment/request" },
+      { label: "Recruitment Approve", href: "/dashboard/recruitment/approval" },
+      { label: "Recruitment Post", href: "/dashboard/recruitment/post" },
+    ],
+  },
 ];
 const ADMIN_MENU = [
   { id: "dashboard", label: "Dashboard", icon: "⊞", href: "/dashboard" },
@@ -121,12 +131,12 @@ const ADMIN_MENU = [
         href: "/dashboard/internal-vacancy/registered-candidates",
       },
       {
-        label: "Filter Candidate",
-        href: "/dashboard/internal-vacancy/filter-candidate",
-      },
-      {
         label: "Record Result",
         href: "/dashboard/internal-vacancy/record-result",
+      },
+      {
+        label: "Filter Candidate",
+        href: "/dashboard/internal-vacancy/filter-candidate",
       },
       {
         label: "Submit Candidates",
@@ -180,6 +190,10 @@ function getRoleBadgeColor(role) {
   return "#27ae60";
 }
 
+function isAdminRole(role) {
+  return role === "ADMIN" || role === "SUPER_ADMIN";
+}
+
 export default function DashboardLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -191,12 +205,33 @@ export default function DashboardLayout({ children }) {
   const [pendingPost, setPendingPost] = useState(0);
   const notifRef = useRef(null);
 
-  const fetchNotifCounts = async () => {
+  const fetchNotifCounts = async (currentUser) => {
     try {
       const res = await api.get("/recruitments");
       const list = res.data || [];
-      setPendingApproval(list.filter(r => r.status === "REQUESTED").length);
-      setPendingPost(list.filter(r => r.status === "APPROVED").length);
+      const role = currentUser?.role;
+      const name = currentUser?.fullName || "";
+      const email = currentUser?.email || "";
+
+      if (role === "SUPER_ADMIN") {
+        // SUPER_ADMIN sees all pending approval requests (REQUESTED status)
+        setPendingApproval(list.filter(r => r.status === "REQUESTED").length);
+        setPendingPost(0); // SUPER_ADMIN does NOT see post notifications
+      } else if (role === "ADMIN") {
+        // ADMIN sees post notifications for recruitments THEY recorded (match by name OR email)
+        const myApproved = list.filter(r =>
+          r.status === "APPROVED" &&
+          (
+            (name && r.recorderName === name) ||
+            (email && r.recorderName === email)
+          )
+        );
+        setPendingApproval(0);
+        setPendingPost(myApproved.length);
+      } else {
+        setPendingApproval(0);
+        setPendingPost(0);
+      }
     } catch {}
   };
 
@@ -217,8 +252,8 @@ export default function DashboardLayout({ children }) {
         }
       });
       // fetch notification counts for ADMIN/SUPER_ADMIN
-      if (parsed.role === "ADMIN" || parsed.role === "SUPER_ADMIN") {
-        fetchNotifCounts();
+      if (isAdminRole(parsed.role)) {
+        fetchNotifCounts(parsed);
       }
     } catch (e) {}
   }, []);
@@ -352,10 +387,10 @@ export default function DashboardLayout({ children }) {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           {/* Notification Bell */}
-          {user && (user.role === "ADMIN" || user.role === "SUPER_ADMIN") && (
+          {user && isAdminRole(user.role) && (
             <div ref={notifRef} style={{ position: "relative" }}>
               <button
-                onClick={() => { setNotifOpen(v => !v); fetchNotifCounts(); }}
+                onClick={() => { setNotifOpen(v => !v); fetchNotifCounts(user); }}
                 style={{ background: "none", border: "none", cursor: "pointer", position: "relative", padding: "4px", display: "flex", alignItems: "center" }}
                 title="Notifications"
               >
@@ -416,7 +451,7 @@ export default function DashboardLayout({ children }) {
                       )}
 
                       {pendingPost > 0 && (
-                        <Link href="/dashboard/recruitment/post"
+                        <Link href={user?.role === "ADMIN" ? "/dashboard/recruitment/request" : "/dashboard/recruitment/post"}
                           onClick={() => { setNotifOpen(false); setPendingPost(0); }}
                           style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 16px", textDecoration: "none" }}
                           onMouseEnter={e => e.currentTarget.style.background = "#f8f9fa"}
@@ -427,10 +462,10 @@ export default function DashboardLayout({ children }) {
                           </div>
                           <div style={{ flex: 1 }}>
                             <p style={{ margin: 0, fontSize: "13px", fontWeight: "600", color: "#1f2937" }}>
-                              Recruitment Post
+                              {user?.role === "ADMIN" ? "Your Request Approved" : "Recruitment Post"}
                             </p>
                             <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#6b7280" }}>
-                              {pendingPost} approved recruitment{pendingPost !== 1 ? "s" : ""} ready to post
+                              {pendingPost} of your recruitment{pendingPost !== 1 ? "s" : ""} {user?.role === "ADMIN" ? "ha" + (pendingPost !== 1 ? "ve" : "s") + " been approved" : "ready to post"}
                             </p>
                           </div>
                           <span style={{ background: "#d1fae5", color: "#065f46", borderRadius: "12px", padding: "2px 8px", fontSize: "11px", fontWeight: "700", flexShrink: 0 }}>
@@ -442,7 +477,7 @@ export default function DashboardLayout({ children }) {
                   )}
 
                   <div style={{ padding: "8px 16px", borderTop: "1px solid #f3f4f6", textAlign: "center" }}>
-                    <button onClick={() => { fetchNotifCounts(); }}
+                    <button onClick={() => { fetchNotifCounts(user); }}
                       style={{ background: "none", border: "none", color: "#2980b9", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
                       Refresh
                     </button>

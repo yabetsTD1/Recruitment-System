@@ -286,6 +286,8 @@ const emptyForm = (requesterName = "") => ({
   icf: "",
   incrementStep: "",
   employmentType: "",
+  contractStartDate: "",
+  contractEndDate: "",
   budgetYear: "",
   remark: "",
   recruitmentType: "",
@@ -332,6 +334,51 @@ export default function RecruitmentRequestPage() {
   }, []);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Unique job titles (deduplicated)
+  const uniqueJobTitles = jobs.filter((j, idx, arr) => arr.findIndex(x => x.jobTitle === j.jobTitle) === idx);
+
+  // ICF options for the currently selected job title
+  const icfOptionsForTitle = form.jobTitle
+    ? [...new Set(jobs.filter(j => j.jobTitle === form.jobTitle && j.icf).map(j => j.icf))].sort((a, b) => Number(a) - Number(b))
+    : [];
+
+  const handleJobTitleSelect = (e) => {
+    const title = e.target.value;
+    // Find the first job with this title to get other fields
+    const job = jobs.find(j => j.jobTitle === title);
+    // Reset ICF when title changes
+    setSelectedJob(job || null);
+    const date = new Date();
+    const ymd = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`;
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const rand = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const batchCode = title ? `REC-${ymd}-${rand}` : "";
+    setForm(f => ({
+      ...f,
+      jobTitle: title,
+      jobQualificationId: job?.id || "",
+      competencyFramework: job?.competencyFramework || "",
+      icf: "", // reset ICF — user must pick
+      positionName: title,
+      batchCode,
+    }));
+    setQualEntries([]);
+  };
+
+  const handleIcfSelect = async (e) => {
+    const icf = e.target.value;
+    // Find the job qualification that matches the selected title + ICF
+    const matchingJob = jobs.find(j => j.jobTitle === form.jobTitle && j.icf === icf);
+    const jqId = matchingJob?.id || form.jobQualificationId;
+    setForm(f => ({ ...f, icf, jobQualificationId: jqId || f.jobQualificationId }));
+    if (jqId) {
+      try {
+        const res = await api.get(`/admin/job-qualifications/${jqId}/entries`);
+        setQualEntries(res.data || []);
+      } catch { setQualEntries([]); }
+    }
+  };
 
   const handleJobSelect = async (e) => {
     const jqId = e.target.value;
@@ -386,6 +433,8 @@ export default function RecruitmentRequestPage() {
       icf: row.icf || "",
       incrementStep: row.incrementStep || "",
       employmentType: row.employmentType || row.hiringType || "",
+      contractStartDate: row.contractStartDate || "",
+      contractEndDate: row.contractEndDate || "",
       budgetYear: row.budgetYear || "",
       remark: row.remark || "",
       recruitmentType: row.recruitmentType || "",
@@ -844,46 +893,39 @@ export default function RecruitmentRequestPage() {
             </div>
 
             <form onSubmit={handleSubmit} style={{ padding: "24px 28px" }}>
-              {/* Row 1: Working Place + Required Jobs */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "16px",
-                  marginBottom: "16px",
-                }}
-              >
-                <div>
-                  <label style={lbl}>
-                    Working Place <span style={{ color: "#e74c3c" }}>*</span>
-                  </label>
-                  <OrgUnitTreePicker
-                    orgUnits={orgUnits}
-                    value={form.jobLocation}
-                    onChange={(v) => set("jobLocation", v)}
-                  />
-                </div>
-                <div>
-                  <label style={lbl}>
-                    Required Job <span style={{ color: "#e74c3c" }}>*</span>
-                  </label>
-                  <select
-                    required
-                    value={form.jobQualificationId}
-                    onChange={handleJobSelect}
-                    style={inp}
-                  >
-                    <option value="">--Select One--</option>
-                    {jobs.map((j) => (
-                      <option key={j.id} value={j.id}>
-                        {j.jobTitle} {j.classCode ? `[${j.classCode}]` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Row 1: Working Place (full width) */}
+              <div style={{ marginBottom: "16px" }}>
+                <label style={lbl}>
+                  Working Place <span style={{ color: "#e74c3c" }}>*</span>
+                </label>
+                <OrgUnitTreePicker
+                  orgUnits={orgUnits}
+                  value={form.jobLocation}
+                  onChange={(v) => set("jobLocation", v)}
+                />
               </div>
 
-              {/* Row 2: ICF + Increment Step */}
+              {/* Row 1b: Required Job (full width) */}
+              <div style={{ marginBottom: "16px" }}>
+                <label style={lbl}>
+                  Required Job <span style={{ color: "#e74c3c" }}>*</span>
+                </label>
+                <select
+                  required
+                  value={form.jobTitle}
+                  onChange={handleJobTitleSelect}
+                  style={inp}
+                >
+                  <option value="">--Select One--</option>
+                  {uniqueJobTitles.map((j) => (
+                    <option key={j.id} value={j.jobTitle}>
+                      {j.jobTitle}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Row 2: ICF (selectable) + Increment Step */}
               <div
                 style={{
                   display: "grid",
@@ -895,29 +937,26 @@ export default function RecruitmentRequestPage() {
                 <div>
                   <label style={lbl}>
                     INSA Competency Framework (ICF){" "}
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        color: "#9ca3af",
-                        fontWeight: "400",
-                      }}
-                    >
-                      (from qualification)
-                    </span>
+                    {form.jobTitle && icfOptionsForTitle.length > 0 && (
+                      <span style={{ fontSize: "11px", color: "#e74c3c", fontWeight: "400" }}>*</span>
+                    )}
                   </label>
-                  <div
-                    style={{
-                      ...inp,
-                      background: "#f3f4f6",
-                      color: form.icf ? "#2c3e50" : "#9ca3af",
-                      cursor: "default",
-                      minHeight: "36px",
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    {form.icf || "— auto-filled when job is selected —"}
-                  </div>
+                  {form.jobTitle && icfOptionsForTitle.length > 0 ? (
+                    <select
+                      value={form.icf}
+                      onChange={handleIcfSelect}
+                      style={inp}
+                    >
+                      <option value="">-- Select ICF --</option>
+                      {icfOptionsForTitle.map(i => (
+                        <option key={i} value={i}>ICF {i}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div style={{ ...inp, background: "#f3f4f6", color: "#9ca3af", cursor: "default", minHeight: "36px", display: "flex", alignItems: "center" }}>
+                      {form.jobTitle ? "No ICF registered for this job" : "— select a job first —"}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={lbl}>Increment Step</label>
@@ -1067,6 +1106,48 @@ export default function RecruitmentRequestPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Contract Dates — only shown when Employment Type is CONTRACT */}
+              {form.employmentType === "CONTRACT" && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "16px",
+                    marginBottom: "16px",
+                    padding: "14px 16px",
+                    background: "#fef3c7",
+                    borderRadius: "8px",
+                    border: "1px solid #fde68a",
+                  }}
+                >
+                  <div>
+                    <label style={{ ...lbl, color: "#92400e" }}>
+                      Contract Start Date <span style={{ color: "#e74c3c" }}>*</span>
+                    </label>
+                    <input
+                      required
+                      type="date"
+                      value={form.contractStartDate}
+                      onChange={(e) => set("contractStartDate", e.target.value)}
+                      style={inp}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ ...lbl, color: "#92400e" }}>
+                      Contract End Date <span style={{ color: "#e74c3c" }}>*</span>
+                    </label>
+                    <input
+                      required
+                      type="date"
+                      min={form.contractStartDate || undefined}
+                      value={form.contractEndDate}
+                      onChange={(e) => set("contractEndDate", e.target.value)}
+                      style={inp}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Row 4: Budget Year + Remark */}
               <div

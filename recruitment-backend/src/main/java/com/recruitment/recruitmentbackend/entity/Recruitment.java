@@ -64,6 +64,12 @@ public class Recruitment {
     @Column(name = "employment_type", length = 50)
     private String employmentType;
 
+    @Column(name = "contract_start_date")
+    private java.time.LocalDate contractStartDate;
+
+    @Column(name = "contract_end_date")
+    private java.time.LocalDate contractEndDate;
+
     @Column(name = "budget_year", length = 10)
     private String budgetYear;
 

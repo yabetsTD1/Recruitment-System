@@ -32,8 +32,8 @@ export default function DegreeExamPage() {
   useEffect(() => {
     const t = setTimeout(() => {
       setSearching(true);
-      api.get(recSearch.trim() ? `/recruitments?search=${encodeURIComponent(recSearch)}` : "/recruitments")
-        .then(r => setRecruitments(r.data.filter(rec => ["POSTED", "APPROVED", "CLOSED"].includes(rec.status))))
+      api.get(recSearch.trim() ? `/recruitments/external-vacancy-posts?search=${encodeURIComponent(recSearch)}` : "/recruitments/external-vacancy-posts")
+        .then(r => setRecruitments(r.data))
         .catch(() => setRecruitments([]))
         .finally(() => setSearching(false));
     }, recSearch.trim() ? 300 : 0);
@@ -75,6 +75,13 @@ export default function DegreeExamPage() {
     }
   };
 
+  // Types already used (excluding the one being edited)
+  const usedCriteriaTypes = criteria
+    .filter(c => !editingCriteria || c.id !== editingCriteria.id)
+    .map(c => c.criteriaName);
+
+  const availableCriteriaTypes = criteriaTypes.filter(t => !usedCriteriaTypes.includes(t));
+
   const handleAddCriteria = () => {
     setCriteriaForm({ criteriaType: "", weight: "" });
     setEditingCriteria(null);
@@ -90,6 +97,15 @@ export default function DegreeExamPage() {
   const handleSaveCriteria = async () => {
     if (!criteriaForm.criteriaType || !criteriaForm.weight) {
       alert("Please fill in all fields");
+      return;
+    }
+
+    // Prevent duplicate criteria type (except when editing the same one)
+    const isDuplicate = criteria.some(
+      c => c.criteriaName === criteriaForm.criteriaType && (!editingCriteria || c.id !== editingCriteria.id)
+    );
+    if (isDuplicate) {
+      alert(`"${criteriaForm.criteriaType}" is already added. Each criteria type can only be used once.`);
       return;
     }
 
@@ -128,7 +144,9 @@ export default function DegreeExamPage() {
       setShowCriteriaModal(false);
       loadCriteria(selectedRec.id);
     } catch (e) {
-      setError("Failed to save criteria");
+      const msg = e?.response?.data?.message;
+      if (msg) alert(msg);
+      else setError("Failed to save criteria");
     }
   };
 
@@ -514,7 +532,7 @@ export default function DegreeExamPage() {
                 }}
               >
                 <option value="">--Select One--</option>
-                {criteriaTypes.map(type => (
+                {availableCriteriaTypes.map(type => (
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>

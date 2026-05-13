@@ -3,11 +3,11 @@ import { useState, useEffect } from "react";
 import api from "@/services/api";
 
 const statusConfig = {
-  SUBMITTED: { label: "Submitted", bg: "#dbeafe", color: "#1d4ed8" },
+  SUBMITTED:    { label: "Submitted",    bg: "#dbeafe", color: "#1d4ed8" },
   UNDER_REVIEW: { label: "Under Review", bg: "#fef3c7", color: "#92400e" },
-  SHORTLISTED: { label: "Shortlisted", bg: "#dcfce7", color: "#15803d" },
-  REJECTED: { label: "Rejected", bg: "#fee2e2", color: "#b91c1c" },
-  HIRED: { label: "Hired", bg: "#d1fae5", color: "#065f46" },
+  SHORTLISTED:  { label: "Shortlisted",  bg: "#dcfce7", color: "#15803d" },
+  REJECTED:     { label: "Rejected",     bg: "#fee2e2", color: "#b91c1c" },
+  HIRED:        { label: "Hired ✓",      bg: "#d1fae5", color: "#065f46" },
 };
 
 export default function MyApplicationsPage() {
@@ -21,6 +21,8 @@ export default function MyApplicationsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const hired   = apps.filter(a => a.status === "HIRED");
+  const rejected = apps.filter(a => a.status === "REJECTED");
   const underReview = apps.filter(a => a.status === "UNDER_REVIEW").length;
   const shortlisted = apps.filter(a => a.status === "SHORTLISTED").length;
 
@@ -28,14 +30,68 @@ export default function MyApplicationsPage() {
     <div>
       <div style={{ marginBottom: "20px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#2c3e50", margin: 0 }}>My Applications</h1>
-        <p style={{ color: "#7f8c8d", fontSize: "13px", margin: "4px 0 0 0" }}>Track your internal vacancy applications</p>
+        <p style={{ color: "#7f8c8d", fontSize: "13px", margin: "4px 0 0 0" }}>Track your application status</p>
       </div>
+
+      {/* Hired Notifications */}
+      {hired.map(app => (
+        <div key={app.id} style={{
+          background: "linear-gradient(135deg, #d1fae5, #a7f3d0)",
+          border: "2px solid #10b981",
+          borderRadius: "12px",
+          padding: "16px 20px",
+          marginBottom: "12px",
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          boxShadow: "0 2px 8px rgba(16,185,129,0.2)"
+        }}>
+          <span style={{ fontSize: "32px" }}>🎉</span>
+          <div>
+            <p style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#065f46" }}>
+              Congratulations! You have been hired.
+            </p>
+            <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#047857" }}>
+              Position: <strong>{app.jobTitle}</strong>
+              {app.department ? ` — ${app.department}` : ""}
+              {app.batchCode ? ` (${app.batchCode})` : ""}
+            </p>
+          </div>
+        </div>
+      ))}
+
+      {/* Rejected Notifications */}
+      {rejected.map(app => (
+        <div key={app.id} style={{
+          background: "linear-gradient(135deg, #fee2e2, #fecaca)",
+          border: "2px solid #ef4444",
+          borderRadius: "12px",
+          padding: "16px 20px",
+          marginBottom: "12px",
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          boxShadow: "0 2px 8px rgba(239,68,68,0.15)"
+        }}>
+          <span style={{ fontSize: "32px" }}>📋</span>
+          <div>
+            <p style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#b91c1c" }}>
+              Your application was not successful.
+            </p>
+            <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#dc2626" }}>
+              Position: <strong>{app.jobTitle}</strong>
+              {app.department ? ` — ${app.department}` : ""}
+              {app.batchCode ? ` (${app.batchCode})` : ""}
+            </p>
+          </div>
+        </div>
+      ))}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "24px" }}>
         {[
-          { label: "Total Applied", value: apps.length, color: "#2980b9" },
-          { label: "Under Review", value: underReview, color: "#e67e22" },
-          { label: "Shortlisted", value: shortlisted, color: "#27ae60" },
+          { label: "Total Applied",  value: apps.length,   color: "#2980b9" },
+          { label: "Under Review",   value: underReview,   color: "#e67e22" },
+          { label: "Shortlisted",    value: shortlisted,   color: "#27ae60" },
         ].map((s, i) => (
           <div key={i} style={{ background: s.color, borderRadius: "6px", padding: "16px 18px", color: "white", boxShadow: "0 2px 6px rgba(0,0,0,0.1)" }}>
             <p style={{ fontSize: "28px", fontWeight: "700", margin: "0 0 2px 0" }}>{s.value}</p>
@@ -68,16 +124,21 @@ export default function MyApplicationsPage() {
               <tbody>
                 {apps.map((app) => {
                   const sc = statusConfig[app.status] || statusConfig.SUBMITTED;
+                  const isHired    = app.status === "HIRED";
+                  const isRejected = app.status === "REJECTED";
                   return (
-                    <tr key={app.id} style={{ borderBottom: "1px solid #f0f3f4" }}
-                      onMouseEnter={e => e.currentTarget.style.background = "#f8f9fa"}
-                      onMouseLeave={e => e.currentTarget.style.background = "white"}>
+                    <tr key={app.id}
+                      style={{ borderBottom: "1px solid #f0f3f4", background: isHired ? "#f0fdf4" : isRejected ? "#fff5f5" : "white" }}
+                      onMouseEnter={e => e.currentTarget.style.background = isHired ? "#dcfce7" : isRejected ? "#fee2e2" : "#f8f9fa"}
+                      onMouseLeave={e => e.currentTarget.style.background = isHired ? "#f0fdf4" : isRejected ? "#fff5f5" : "white"}>
                       <td style={{ padding: "10px 16px", fontSize: "13px", color: "#2980b9", fontWeight: "600" }}>{app.batchCode || "—"}</td>
                       <td style={{ padding: "10px 16px", fontSize: "13px", color: "#2c3e50", fontWeight: "500" }}>{app.jobTitle}</td>
                       <td style={{ padding: "10px 16px", fontSize: "13px", color: "#5d6d7e" }}>{app.department || "—"}</td>
                       <td style={{ padding: "10px 16px", fontSize: "13px", color: "#5d6d7e" }}>{app.appliedAt}</td>
                       <td style={{ padding: "10px 16px" }}>
-                        <span style={{ background: sc.bg, color: sc.color, padding: "3px 10px", borderRadius: "10px", fontSize: "11px", fontWeight: "700" }}>{sc.label}</span>
+                        <span style={{ background: sc.bg, color: sc.color, padding: "4px 12px", borderRadius: "10px", fontSize: "12px", fontWeight: "700" }}>
+                          {sc.label}
+                        </span>
                       </td>
                     </tr>
                   );

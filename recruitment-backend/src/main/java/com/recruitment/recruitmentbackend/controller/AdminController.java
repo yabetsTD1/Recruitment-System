@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.recruitment.recruitmentbackend.dto.CreateUserRequest;
@@ -269,13 +270,38 @@ public class AdminController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/employees/by-email")
+    public ResponseEntity<?> getEmployeeByEmail(@RequestParam String email) {
+        return employeeRepository.findByEmail(email).map(e -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", e.getId());
+            m.put("employeeId", e.getEmployeeId());
+            m.put("fullName", e.getFullName());
+            m.put("email", e.getEmail());
+            m.put("department", e.getDepartment() != null ? e.getDepartment() : "");
+            m.put("position", e.getPosition() != null ? e.getPosition() : "");
+            m.put("phone", e.getPhone() != null ? e.getPhone() : "");
+            m.put("gender", e.getGender() != null ? e.getGender() : "");
+            m.put("title", e.getTitle() != null ? e.getTitle() : "");
+            m.put("location", e.getLocation() != null ? e.getLocation() : "");
+            m.put("nation", e.getNation() != null ? e.getNation() : "");
+            m.put("graduatedFrom", e.getGraduatedFrom() != null ? e.getGraduatedFrom() : "");
+            m.put("gpa", e.getGpa() != null ? e.getGpa() : "");
+            m.put("experienceYears", e.getExperienceYears() != null ? e.getExperienceYears() : "");
+            m.put("githubUrl", e.getGithubUrl() != null ? e.getGithubUrl() : "");
+            m.put("linkedinUrl", e.getLinkedinUrl() != null ? e.getLinkedinUrl() : "");
+            m.put("status", e.getStatus().name());
+            m.put("contractEndDate", e.getContractEndDate() != null ? e.getContractEndDate().toString() : null);
+            return ResponseEntity.ok((Object) m);
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/employees/contract-expiring")
     public ResponseEntity<?> getContractExpiringEmployees() {
         java.time.LocalDate today = java.time.LocalDate.now();
-        java.time.LocalDate in30Days = today.plusDays(30);
+        // Show ALL employees that have a contract end date
         List<?> result = employeeRepository.findAll().stream()
                 .filter(e -> e.getContractEndDate() != null)
-                .filter(e -> !e.getContractEndDate().isAfter(in30Days))
                 .map(e -> {
                     Map<String, Object> m = new HashMap<>();
                     m.put("id", e.getId());
@@ -289,6 +315,53 @@ public class AdminController {
                     m.put("contractEndDate", e.getContractEndDate().toString());
                     m.put("expired", e.getContractEndDate().isBefore(today));
                     m.put("daysUntilExpiry", java.time.temporal.ChronoUnit.DAYS.between(today, e.getContractEndDate()));
+                    m.put("sourceType", "EMPLOYEE");
+                    return m;
+                }).toList();
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/applicants/contract")
+    public ResponseEntity<?> getContractApplicants() {
+        java.time.LocalDate today = java.time.LocalDate.now();
+        // Find all applications where the recruitment has employmentType = CONTRACT
+        // Exclude applicants who have already been converted to employees
+        List<?> result = applicationRepository.findAll().stream()
+                .filter(a -> {
+                    com.recruitment.recruitmentbackend.entity.Recruitment r = a.getRecruitment();
+                    return r != null && "CONTRACT".equalsIgnoreCase(r.getEmploymentType());
+                })
+                .filter(a -> {
+                    // Exclude if already converted to an employee (email exists in employee table)
+                    String email = a.getApplicant().getEmail();
+                    return email == null || !employeeRepository.existsByEmail(email);
+                })
+                .map(a -> {
+                    com.recruitment.recruitmentbackend.entity.Recruitment r = a.getRecruitment();
+                    com.recruitment.recruitmentbackend.entity.Applicant ap = a.getApplicant();
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", a.getId());
+                    m.put("applicationId", a.getId());
+                    m.put("fullName", ap.getFullName() != null ? ap.getFullName() : "");
+                    m.put("email", ap.getEmail() != null ? ap.getEmail() : "");
+                    m.put("phone", ap.getPhone() != null ? ap.getPhone() : "");
+                    m.put("jobTitle", r.getJobTitle());
+                    m.put("department", r.getDepartment() != null ? r.getDepartment() : "");
+                    m.put("batchCode", r.getBatchCode() != null ? r.getBatchCode() : "");
+                    m.put("employmentType", r.getEmploymentType() != null ? r.getEmploymentType() : "");
+                    m.put("contractStartDate", r.getContractStartDate() != null ? r.getContractStartDate().toString() : null);
+                    m.put("contractEndDate", r.getContractEndDate() != null ? r.getContractEndDate().toString() : null);
+                    m.put("applicationStatus", a.getApplicationStatus().name());
+                    m.put("appliedAt", a.getAppliedAt() != null ? a.getAppliedAt().toLocalDate().toString() : "");
+                    m.put("sourceType", "APPLICANT");
+                    // Compute expiry info if contract end date exists
+                    if (r.getContractEndDate() != null) {
+                        m.put("expired", r.getContractEndDate().isBefore(today));
+                        m.put("daysUntilExpiry", java.time.temporal.ChronoUnit.DAYS.between(today, r.getContractEndDate()));
+                    } else {
+                        m.put("expired", false);
+                        m.put("daysUntilExpiry", null);
+                    }
                     return m;
                 }).toList();
         return ResponseEntity.ok(result);

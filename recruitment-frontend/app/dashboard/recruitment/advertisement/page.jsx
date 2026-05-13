@@ -24,6 +24,7 @@ export default function AdvertisementPage() {
   const [showMediaModal, setShowMediaModal] = useState(false);
   const [mediaForm, setMediaForm] = useState({ mediaType: "", mediaName: "", occurrence: 0 });
   const [editingMedia, setEditingMedia] = useState(null);
+  const [showAll, setShowAll] = useState(false);
 
   const fetch = async () => {
     try {
@@ -192,6 +193,11 @@ export default function AdvertisementPage() {
       </div>
 
       <div style={{ background: "white", borderRadius: "8px", boxShadow: "0 1px 4px rgba(0,0,0,0.08)", border: "1px solid #ecf0f1", overflow: "hidden" }}>
+        <div style={{ padding: "10px 18px", background: "#f8f9fa", borderBottom: "1px solid #ecf0f1", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: "12px", color: "#7f8c8d" }}>
+            Showing recent 5 of {data.length} advertisement{data.length !== 1 ? "s" : ""}
+          </span>
+        </div>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead style={{ background: "#f8f9fa" }}>
             <tr>
@@ -207,7 +213,7 @@ export default function AdvertisementPage() {
               <tr><td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "#e74c3c" }}>{error}</td></tr>
             ) : data.length === 0 ? (
               <tr><td colSpan={7} style={{ padding: "32px", textAlign: "center", color: "#7f8c8d" }}>No advertisements found.</td></tr>
-            ) : data.map((row) => (
+            ) : (showAll ? [...data].reverse() : data.slice(-5).reverse()).map((row) => (
               <tr key={row.id} style={{ borderTop: "1px solid #f0f3f4" }}>
                 <td style={{ padding: "13px 18px", fontWeight: "600", color: "#2980b9", fontSize: "13px" }}>#{row.id}</td>
                 <td style={{ padding: "13px 18px", fontWeight: "600", color: "#2c3e50", fontSize: "13px" }}>{row.jobTitle}</td>
@@ -239,6 +245,25 @@ export default function AdvertisementPage() {
           </tbody>
         </table>
       </div>
+      {data.length > 5 && (
+        <div style={{ textAlign: "center", marginTop: "12px" }}>
+          <button
+            onClick={() => setShowAll(prev => !prev)}
+            style={{
+              background: "none",
+              border: "1px solid #d1d5db",
+              borderRadius: "6px",
+              padding: "7px 24px",
+              fontSize: "13px",
+              fontWeight: "600",
+              color: "#3498db",
+              cursor: "pointer"
+            }}
+          >
+            {showAll ? "Show Less ↑" : `See All (${data.length}) ↓`}
+          </button>
+        </div>
+      )}
 
       {/* Media Management Modal */}
       {selectedRecruitment && (

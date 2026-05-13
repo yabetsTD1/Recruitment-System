@@ -8,6 +8,7 @@ import CertificationsSection from "./components/CertificationsSection";
 import ExperienceSection from "./components/ExperienceSection";
 import LanguageSection from "./components/LanguageSection";
 import DocumentsSection from "./components/DocumentsSection";
+import { ETHIOPIAN_NATIONS } from "@/data/ethiopianNations";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -34,7 +35,7 @@ const labelStyle = {
   letterSpacing: "0.01em"
 };
 
-function ApplyForm({ jobIdOverride }) {
+function ApplyForm({ jobIdOverride, onBack }) {
   const params = useSearchParams();
   const jobId = jobIdOverride || params.get("id");
   const emailParam = params.get("email");
@@ -208,9 +209,15 @@ function ApplyForm({ jobIdOverride }) {
         <p style={{ color: "#7f8c8d", fontSize: "15px", marginBottom: "24px" }}>
           Thank you for applying to <strong>{job.jobTitle}</strong>. We'll be in touch.
         </p>
-        <Link href="/jobs" style={{ padding: "10px 24px", background: "#2980b9", color: "white", borderRadius: "6px", textDecoration: "none", fontWeight: "600" }}>
-          ← Back to Jobs
-        </Link>
+        {onBack ? (
+          <button onClick={onBack} style={{ padding: "10px 24px", background: "#2980b9", color: "white", borderRadius: "6px", border: "none", fontWeight: "600", cursor: "pointer" }}>
+            ← Back to Jobs
+          </button>
+        ) : (
+          <Link href="/jobs" style={{ padding: "10px 24px", background: "#2980b9", color: "white", borderRadius: "6px", textDecoration: "none", fontWeight: "600" }}>
+            ← Back to Jobs
+          </Link>
+        )}
       </div>
     );
   }
@@ -389,7 +396,11 @@ function ApplyForm({ jobIdOverride }) {
       </div>
 
       <div style={{ textAlign: "center", marginTop: "16px" }}>
-        <Link href="/jobs" style={{ color: "#7f8c8d", fontSize: "13px", textDecoration: "none" }}>← Back to all jobs</Link>
+        {onBack ? (
+          <button onClick={onBack} style={{ background: "none", border: "none", color: "#7f8c8d", fontSize: "13px", cursor: "pointer", textDecoration: "none" }}>← Back to all jobs</button>
+        ) : (
+          <Link href="/jobs" style={{ color: "#7f8c8d", fontSize: "13px", textDecoration: "none" }}>← Back to all jobs</Link>
+        )}
       </div>
     </div>
   );
@@ -400,6 +411,11 @@ export default function ApplyPage() {
   const [activePage, setActivePage] = useState("apply");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [applicant, setApplicant] = useState(null);
+  const [editingPersonalInfo, setEditingPersonalInfo] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editSuccess, setEditSuccess] = useState("");
   const [applications, setApplications] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [notifications, setNotifications] = useState([]);
@@ -973,7 +989,7 @@ export default function ApplyPage() {
                   ← Back to My Profile
                 </button>
               </div>
-              <ApplyForm key={selectedJobId} jobIdOverride={selectedJobId} />
+              <ApplyForm key={selectedJobId} jobIdOverride={selectedJobId} onBack={() => { setSelectedJobId(null); setActivePage("jobs"); }} />
             </Suspense>
           )}
 
@@ -992,7 +1008,7 @@ export default function ApplyPage() {
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead style={{ background: "linear-gradient(135deg, #f8fafc, #f1f5f9)" }}>
                       <tr>
-                        {["#", "Job Title", "Department", "Applied Date", "Closing Date", "Status"].map(h => (
+                        {["#", "Job Title", "Department", "Applied Date", "Closing Date", "Status", "Action"].map(h => (
                           <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: "12px", fontWeight: "700", color: "#374151" }}>{h}</th>
                         ))}
                       </tr>
@@ -1009,6 +1025,13 @@ export default function ApplyPage() {
                             <td style={{ padding: "12px 16px", color: "#f59e0b", fontSize: "13px", fontWeight: "600" }}>{app.closingDate || "—"}</td>
                             <td style={{ padding: "12px 16px" }}>
                               <span style={{ padding: "4px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: "700", background: s.bg, color: s.color }}>{s.label}</span>
+                            </td>
+                            <td style={{ padding: "12px 16px" }}>
+                              <button
+                                onClick={() => viewJobDetails(app.recruitmentId)}
+                                style={{ padding: "5px 14px", background: "#dbeafe", color: "#1d4ed8", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
+                                Details
+                              </button>
                             </td>
                           </tr>
                         );
@@ -1057,7 +1080,27 @@ export default function ApplyPage() {
                   ))}
                 </div>
                 <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid #f3f4f6" }}>
-                  <button onClick={() => setActivePage("apply")}
+                  <button onClick={() => {
+                    setEditForm({
+                      firstName: applicant?.firstName || "",
+                      middleName: applicant?.middleName || "",
+                      lastName: applicant?.lastName || "",
+                      email: applicant?.email || "",
+                      phoneNumber1: applicant?.phone || "",
+                      phoneNumber2: applicant?.phoneNumber2 || "",
+                      residentialAddress: applicant?.location || "",
+                      gender: applicant?.gender || "",
+                      title: applicant?.title || "",
+                      maritalStatus: applicant?.maritalStatus || "",
+                      dateOfBirth: applicant?.dateOfBirth || "",
+                      githubUrl: applicant?.githubUrl || "",
+                      linkedinUrl: applicant?.linkedinUrl || "",
+                      nation: applicant?.nation || "",
+                    });
+                    setEditError("");
+                    setEditSuccess("");
+                    setEditingPersonalInfo(true);
+                  }}
                     style={{ padding: "10px 20px", background: "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white", border: "none", borderRadius: "8px", fontWeight: "600", fontSize: "13px", cursor: "pointer" }}>
                     Edit Profile
                   </button>
@@ -1071,6 +1114,123 @@ export default function ApplyPage() {
           </div>
         </div>
       </div>
+
+      {/* Edit Personal Information Modal */}
+      {editingPersonalInfo && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+          <div style={{ background: "white", borderRadius: "14px", width: "100%", maxWidth: "680px", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#1f2937" }}>Edit Personal Information</h2>
+              <button onClick={() => setEditingPersonalInfo(false)} style={{ background: "none", border: "none", fontSize: "22px", color: "#9ca3af", cursor: "pointer", lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ padding: "24px" }}>
+              {editError && <div style={{ background: "#fee2e2", color: "#b91c1c", padding: "10px 14px", borderRadius: "8px", marginBottom: "16px", fontSize: "13px" }}>{editError}</div>}
+              {editSuccess && <div style={{ background: "#d1fae5", color: "#065f46", padding: "10px 14px", borderRadius: "8px", marginBottom: "16px", fontSize: "13px" }}>{editSuccess}</div>}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                {[
+                  { label: "First Name *", key: "firstName", type: "text" },
+                  { label: "Middle Name", key: "middleName", type: "text" },
+                  { label: "Last Name *", key: "lastName", type: "text" },
+                  { label: "Phone Number", key: "phoneNumber1", type: "tel" },
+                  { label: "Phone Number 2", key: "phoneNumber2", type: "tel" },
+                  { label: "Residential Address", key: "residentialAddress", type: "text" },
+                  { label: "Date of Birth", key: "dateOfBirth", type: "date" },
+                  { label: "GitHub URL", key: "githubUrl", type: "url" },
+                  { label: "LinkedIn URL", key: "linkedinUrl", type: "url" },
+                ].map(f => (
+                  <div key={f.key}>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>{f.label}</label>
+                    <input
+                      type={f.type}
+                      value={editForm[f.key] || ""}
+                      onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))}
+                      style={{ width: "100%", padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: "7px", fontSize: "13px", boxSizing: "border-box", outline: "none" }}
+                    />
+                  </div>
+                ))}
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>Gender</label>
+                  <select value={editForm.gender || ""} onChange={e => setEditForm(p => ({ ...p, gender: e.target.value }))}
+                    style={{ width: "100%", padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: "7px", fontSize: "13px", boxSizing: "border-box" }}>
+                    <option value="">Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>Title</label>
+                  <select value={editForm.title || ""} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))}
+                    style={{ width: "100%", padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: "7px", fontSize: "13px", boxSizing: "border-box" }}>
+                    <option value="">Select</option>
+                    <option value="Mr">Mr</option>
+                    <option value="Mrs">Mrs</option>
+                    <option value="Ms">Ms</option>
+                    <option value="Dr">Dr</option>
+                    <option value="Prof">Prof</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>Marital Status</label>
+                  <select value={editForm.maritalStatus || ""} onChange={e => setEditForm(p => ({ ...p, maritalStatus: e.target.value }))}
+                    style={{ width: "100%", padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: "7px", fontSize: "13px", boxSizing: "border-box" }}>
+                    <option value="">Select</option>
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Divorced">Divorced</option>
+                    <option value="Widowed">Widowed</option>
+                  </select>
+                </div>
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: "600", color: "#374151", marginBottom: "5px" }}>Nationality (Ethiopian Nation)</label>
+                  <select value={editForm.nation || ""} onChange={e => setEditForm(p => ({ ...p, nation: e.target.value }))}
+                    style={{ width: "100%", padding: "9px 12px", border: "1px solid #d1d5db", borderRadius: "7px", fontSize: "13px", boxSizing: "border-box" }}>
+                    <option value="">-- Select Nationality --</option>
+                    {ETHIOPIAN_NATIONS.map((n, i) => <option key={i} value={n}>{n}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div style={{ padding: "16px 24px", borderTop: "1px solid #f3f4f6", display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button onClick={() => setEditingPersonalInfo(false)} disabled={editSaving}
+                style={{ padding: "10px 22px", background: "#f3f4f6", color: "#374151", border: "none", borderRadius: "8px", fontWeight: "600", fontSize: "13px", cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button
+                disabled={editSaving}
+                onClick={async () => {
+                  if (!editForm.firstName?.trim() || !editForm.lastName?.trim()) {
+                    setEditError("First name and last name are required.");
+                    return;
+                  }
+                  setEditSaving(true);
+                  setEditError("");
+                  try {
+                    const res = await fetch(`${API}/public/applicant/update`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ ...editForm, email: applicant?.email }),
+                    });
+                    if (!res.ok) { setEditError("Failed to update profile."); return; }
+                    // Refresh applicant data
+                    const updated = await fetch(`${API}/public/applicant/profile?email=${encodeURIComponent(applicant?.email)}`).then(r => r.json());
+                    setApplicant(updated);
+                    if (updated.fullName) setFullName(updated.fullName);
+                    setEditSuccess("Profile updated successfully!");
+                    setTimeout(() => { setEditingPersonalInfo(false); setEditSuccess(""); }, 1500);
+                  } catch {
+                    setEditError("Network error. Please try again.");
+                  } finally {
+                    setEditSaving(false);
+                  }
+                }}
+                style={{ padding: "10px 22px", background: editSaving ? "#9ca3af" : "linear-gradient(135deg, #3b82f6, #2563eb)", color: "white", border: "none", borderRadius: "8px", fontWeight: "600", fontSize: "13px", cursor: editSaving ? "not-allowed" : "pointer" }}>
+                {editSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Job Detail Modal */}
       {(loadingJobDetail || viewingJob) && (

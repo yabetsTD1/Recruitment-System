@@ -41,8 +41,8 @@ export default function HireCandidatesPage() {
   useEffect(() => {
     const t = setTimeout(() => {
       setSearching(true);
-      api.get(recSearch.trim() ? `/recruitments?search=${encodeURIComponent(recSearch)}` : "/recruitments")
-        .then(r => setRecruitments(r.data.filter(rec => ["POSTED", "APPROVED", "CLOSED"].includes(rec.status))))
+      api.get(recSearch.trim() ? `/recruitments/external-vacancy-posts?search=${encodeURIComponent(recSearch)}` : "/recruitments/external-vacancy-posts")
+        .then(r => setRecruitments(r.data))
         .catch(() => setRecruitments([]))
         .finally(() => setSearching(false));
     }, recSearch.trim() ? 300 : 0);

@@ -9,16 +9,13 @@ export default function RecordCriteriaPage() {
   const [searching, setSearching] = useState(false);
   const [dropOpen, setDropOpen] = useState(false);
   const [criteria, setCriteria] = useState([]);
-  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showCriteriaModal, setShowCriteriaModal] = useState(false);
   const [showColumnsModal, setShowColumnsModal] = useState(false);
   const [criteriaForm, setCriteriaForm] = useState({ criteriaType: "", weight: "" });
   const [editingCriteria, setEditingCriteria] = useState(null);
-  const [scores, setScores] = useState({});
   const [visibleColumns, setVisibleColumns] = useState({});
-  const [tableSearch, setTableSearch] = useState("");
 
   const criteriaTypes = [
     "InterviewExam",
@@ -32,7 +29,7 @@ export default function RecordCriteriaPage() {
   useEffect(() => {
     const t = setTimeout(() => {
       setSearching(true);
-      api.get(recSearch.trim() ? `/recruitments/internal-jobs?search=${encodeURIComponent(recSearch)}` : "/recruitments/internal-jobs")
+      api.get(recSearch.trim() ? `/recruitments/vacancy-posts?search=${encodeURIComponent(recSearch)}` : "/recruitments/vacancy-posts")
         .then(r => setResults(r.data))
         .catch(() => setResults([]))
         .finally(() => setSearching(false));
@@ -45,7 +42,6 @@ export default function RecordCriteriaPage() {
     setRecSearch("");
     setDropOpen(false);
     loadCriteria(r.id);
-    loadApplications(r.id);
   };
 
   const loadCriteria = async (recId) => {
@@ -58,18 +54,6 @@ export default function RecordCriteriaPage() {
       setVisibleColumns(cols);
     } catch {
       setError("Failed to load criteria");
-    }
-  };
-
-  const loadApplications = async (recId) => {
-    setLoading(true);
-    try {
-      const res = await api.get(`/recruitments/${recId}/applications`);
-      setApplications(res.data.filter(a => a.status === "SHORTLISTED"));
-    } catch {
-      setError("Failed to load applications");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -135,42 +119,6 @@ export default function RecordCriteriaPage() {
     }
   };
 
-  const handleScoreChange = (appId, criteriaId, value) => {
-    setScores(prev => ({ ...prev, [appId]: { ...prev[appId], [criteriaId]: value } }));
-  };
-
-  const calculateTotal = (appId) => {
-    const appScores = scores[appId] || {};
-    let totalWeight = 0;
-    let weightedSum = 0;
-    criteria.forEach(c => {
-      const score = parseFloat(appScores[c.id]) || 0;
-      const weight = parseFloat(c.weight) || 0;
-      weightedSum += score * weight;
-      totalWeight += weight;
-    });
-    return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
-  };
-
-  const handleSaveScores = async (appId) => {
-    const appScores = scores[appId] || {};
-    const allFilled = criteria.every(c => appScores[c.id]);
-    if (!allFilled) { alert("Please fill in all exam scores"); return; }
-    const total = calculateTotal(appId);
-    try {
-      await api.put(`/recruitments/applications/${appId}/scores`, {
-        examScores: JSON.stringify(appScores),
-        totalScore: total,
-      });
-      const newStatus = total >= 60 ? "SHORTLISTED" : "REJECTED";
-      await api.put(`/recruitments/applications/${appId}/status`, { status: newStatus });
-      setApplications(prev => prev.map(a => a.id === appId ? { ...a, totalScore: total, status: newStatus } : a));
-      alert("Scores saved successfully");
-    } catch {
-      setError("Failed to save scores");
-    }
-  };
-
   const toggleColumn = (criteriaId) => {
     setVisibleColumns(prev => ({ ...prev, [criteriaId]: !prev[criteriaId] }));
   };
@@ -225,7 +173,7 @@ export default function RecordCriteriaPage() {
           <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px", padding: "8px 12px", background: "#f0f9ff", borderRadius: "6px", border: "1px solid #bae6fd" }}>
             <span style={{ fontSize: "13px", fontWeight: "600", color: "#0369a1" }}>{selectedRec.jobTitle}</span>
             <span style={{ fontSize: "12px", color: "#7f8c8d" }}>{selectedRec.batchCode}</span>
-            <button onClick={() => { setSelectedRec(null); setCriteria([]); setApplications([]); }}
+            <button onClick={() => { setSelectedRec(null); setCriteria([]); }}
               style={{ marginLeft: "auto", background: "none", border: "none", color: "#9ca3af", cursor: "pointer", fontSize: "16px" }}>×</button>
           </div>
         )}
@@ -299,69 +247,6 @@ export default function RecordCriteriaPage() {
               <div style={{ marginTop: "12px", padding: "10px 14px", background: "#fef3c7", borderRadius: "6px", fontSize: "13px", color: "#92400e" }}>
                 ⚠️ Warning: Total weight should equal 100%. Current total: {totalWeight}%
               </div>
-            )}
-          </div>
-
-          {/* Applications Table */}
-          <div style={{ background: "white", borderRadius: "16px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", border: "1px solid #f3f4f6", overflow: "auto" }}>
-            <div style={{ padding: "10px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: "8px", background: "#f8f9fa" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              <input type="text" placeholder="Search candidate by name..." value={tableSearch}
-                onChange={e => setTableSearch(e.target.value)}
-                style={{ border: "none", outline: "none", fontSize: "13px", background: "transparent", flex: 1 }} />
-              {tableSearch && <button onClick={() => setTableSearch("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: "14px", padding: 0 }}>×</button>}
-            </div>
-            {loading ? (
-              <div style={{ padding: "40px", textAlign: "center", color: "#6b7280" }}>Loading...</div>
-            ) : applications.length === 0 ? (
-              <div style={{ padding: "40px", textAlign: "center", color: "#9ca3af" }}>No shortlisted candidates for this recruitment.</div>
-            ) : criteria.length === 0 ? (
-              <div style={{ padding: "40px", textAlign: "center", color: "#9ca3af" }}>Please add exam criteria first.</div>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "800px" }}>
-                <thead style={{ background: "linear-gradient(135deg, #f8fafc, #f1f5f9)" }}>
-                  <tr>
-                    <th style={{ padding: "14px 16px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151", position: "sticky", left: 0, background: "#f8fafc", zIndex: 1 }}>Candidate</th>
-                    {criteria.filter(c => visibleColumns[c.id]).map(c => (
-                      <th key={c.id} style={{ padding: "14px 16px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151" }}>
-                        {c.criteriaName}<br />
-                        <span style={{ fontSize: "11px", fontWeight: "400", color: "#6b7280" }}>({c.weight}%)</span>
-                      </th>
-                    ))}
-                    <th style={{ padding: "14px 16px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151" }}>Total</th>
-                    <th style={{ padding: "14px 16px", textAlign: "left", fontSize: "13px", fontWeight: "600", color: "#374151" }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {applications.filter(app => !tableSearch.trim() || (app.applicantName || "").toLowerCase().includes(tableSearch.toLowerCase())).map(app => {
-                    const total = calculateTotal(app.id);
-                    const appScores = scores[app.id] || {};
-                    const allFilled = criteria.every(c => appScores[c.id]);
-                    return (
-                      <tr key={app.id} style={{ borderTop: "1px solid #f9fafb" }}>
-                        <td style={{ padding: "14px 16px", fontWeight: "600", color: "#1f2937", position: "sticky", left: 0, background: "white", zIndex: 1 }}>{app.applicantName}</td>
-                        {criteria.filter(c => visibleColumns[c.id]).map(c => (
-                          <td key={c.id} style={{ padding: "14px 16px" }}>
-                            <input type="number" min="0" max="100" placeholder="0-100"
-                              value={appScores[c.id] || ""}
-                              onChange={e => handleScoreChange(app.id, c.id, e.target.value)}
-                              style={{ width: "80px", padding: "6px 10px", border: "2px solid #e5e7eb", borderRadius: "8px", fontSize: "13px", outline: "none" }} />
-                          </td>
-                        ))}
-                        <td style={{ padding: "14px 16px", fontWeight: "700", fontSize: "16px", color: allFilled ? (total >= 60 ? "#10b981" : "#ef4444") : "#9ca3af" }}>
-                          {allFilled ? total : "—"}
-                        </td>
-                        <td style={{ padding: "14px 16px" }}>
-                          <button onClick={() => handleSaveScores(app.id)} disabled={!allFilled}
-                            style={{ padding: "6px 16px", background: allFilled ? "linear-gradient(135deg, #3b82f6, #8b5cf6)" : "#e5e7eb", color: allFilled ? "white" : "#9ca3af", border: "none", borderRadius: "8px", cursor: allFilled ? "pointer" : "default", fontWeight: "600", fontSize: "12px" }}>
-                            Update
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
             )}
           </div>
         </>

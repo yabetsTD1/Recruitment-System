@@ -52,8 +52,8 @@ export default function FilterCandidatesPage() {
   const [tableSearch, setTableSearch] = useState("");
 
   useEffect(() => {
-    api.get("/recruitments")
-      .then(r => setRecruitments(r.data.filter(rec => ["POSTED", "APPROVED", "CLOSED"].includes(rec.status))))
+    api.get("/recruitments/external-vacancy-posts")
+      .then(r => setRecruitments(r.data))
       .catch(() => {});
   }, []);
 
@@ -105,13 +105,21 @@ export default function FilterCandidatesPage() {
     setColFilter({ graduatedFrom: "", gender: "", nation: "" });
   };
 
-  // Apply inline column filters on top of filteredApps
+  // Apply inline column filters on top of filteredApps, sorted by exam total descending
   const displayed = filteredApps.filter(app => {
     if (tableSearch.trim() && !(app.applicantName || "").toLowerCase().includes(tableSearch.toLowerCase())) return false;
     if (colFilter.graduatedFrom && !(app.graduatedFrom || "").toLowerCase().includes(colFilter.graduatedFrom.toLowerCase())) return false;
     if (colFilter.gender && !(app.applicantGender || "").toLowerCase().includes(colFilter.gender.toLowerCase())) return false;
     if (colFilter.nation && !(app.nation || "").toLowerCase().includes(colFilter.nation.toLowerCase())) return false;
     return true;
+  }).sort((a, b) => {
+    const totalA = getExamTotal(a.id);
+    const totalB = getExamTotal(b.id);
+    // Candidates with scores rank above those without
+    if (totalA === null && totalB === null) return 0;
+    if (totalA === null) return 1;
+    if (totalB === null) return -1;
+    return totalB - totalA; // highest first
   });
 
   const updateStatus = (appId, status) => {
@@ -263,7 +271,7 @@ export default function FilterCandidatesPage() {
                   <input type="checkbox" checked={selectedRows.length === displayed.length && displayed.length > 0}
                     onChange={toggleAll} style={{ cursor: "pointer" }} />
                 </th>
-                <th style={thStyle}>No</th>
+                <th style={thStyle}>Rank</th>
                 <th style={thStyle}>ID</th>
                 <th style={thStyle}>Name</th>
                 <th style={{ ...thStyle, minWidth: "140px" }}>
@@ -301,7 +309,9 @@ export default function FilterCandidatesPage() {
                       <input type="checkbox" checked={selectedRows.includes(app.id)}
                         onChange={() => toggleRow(app.id)} style={{ cursor: "pointer" }} />
                     </td>
-                    <td style={tdStyle}>{idx + 1}</td>
+                    <td style={{ ...tdStyle, fontWeight: "700", color: idx === 0 ? "#d97706" : idx === 1 ? "#6b7280" : idx === 2 ? "#b45309" : "#4b5563" }}>
+                      {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : idx + 1}
+                    </td>
                     <td style={tdStyle}>{app.id}</td>
                     <td style={{ ...tdStyle, fontWeight: "600", color: "#1f2937" }}>{app.applicantName}</td>
                     <td style={tdStyle}>{app.graduatedFrom || "—"}</td>

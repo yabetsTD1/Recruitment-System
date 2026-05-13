@@ -142,6 +142,17 @@ public class RecruitmentController {
             r.setBudgetYear(body.getOrDefault("budgetYear", r.getBudgetYear() != null ? r.getBudgetYear() : "").toString());
             r.setRecruitmentType(body.getOrDefault("recruitmentType", r.getRecruitmentType() != null ? r.getRecruitmentType() : "").toString());
             r.setPositionName(body.getOrDefault("positionName", r.getPositionName() != null ? r.getPositionName() : "").toString());
+            // contract dates
+            if (body.get("contractStartDate") != null && !body.get("contractStartDate").toString().isEmpty()) {
+                r.setContractStartDate(java.time.LocalDate.parse(body.get("contractStartDate").toString()));
+            } else if (body.containsKey("contractStartDate")) {
+                r.setContractStartDate(null);
+            }
+            if (body.get("contractEndDate") != null && !body.get("contractEndDate").toString().isEmpty()) {
+                r.setContractEndDate(java.time.LocalDate.parse(body.get("contractEndDate").toString()));
+            } else if (body.containsKey("contractEndDate")) {
+                r.setContractEndDate(null);
+            }
             Integer jobQualId = body.get("jobQualificationId") != null && !body.get("jobQualificationId").toString().isEmpty()
                     ? Integer.parseInt(body.get("jobQualificationId").toString()) : null;
             if (jobQualId != null) {
@@ -183,6 +194,13 @@ public class RecruitmentController {
         r.setBudgetYear(body.getOrDefault("budgetYear", "").toString());
         r.setRecruitmentType(body.getOrDefault("recruitmentType", "").toString());
         r.setPositionName(body.getOrDefault("positionName", "").toString());
+        // contract dates — only relevant when employmentType is CONTRACT
+        if (body.get("contractStartDate") != null && !body.get("contractStartDate").toString().isEmpty()) {
+            r.setContractStartDate(java.time.LocalDate.parse(body.get("contractStartDate").toString()));
+        }
+        if (body.get("contractEndDate") != null && !body.get("contractEndDate").toString().isEmpty()) {
+            r.setContractEndDate(java.time.LocalDate.parse(body.get("contractEndDate").toString()));
+        }
         // auto-generate batch code: REC-YYYYMMDD-XXXX
         String batch = "REC-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
                 + "-" + UUID.randomUUID().toString().substring(0, 4).toUpperCase();
@@ -511,6 +529,34 @@ public class RecruitmentController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/external-vacancy-posts")
+    public ResponseEntity<?> getExternalVacancyPosts(@RequestParam(required = false) String search) {
+        String q = search != null ? search.toLowerCase().trim() : "";
+        List<?> result = postRepository.findAll().stream()
+                .filter(p -> p.getPostType() == RecruitmentPost.PostType.EXTERNAL
+                        && (q.isEmpty()
+                            || (p.getRecruitment().getJobTitle() != null && p.getRecruitment().getJobTitle().toLowerCase().contains(q))
+                            || (p.getRecruitment().getBatchCode() != null && p.getRecruitment().getBatchCode().toLowerCase().contains(q))))
+                .map(p -> {
+                    Recruitment r = p.getRecruitment();
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", r.getId());
+                    m.put("postId", p.getId());
+                    m.put("jobTitle", r.getJobTitle());
+                    m.put("department", r.getDepartment() != null ? r.getDepartment() : "");
+                    m.put("batchCode", r.getBatchCode() != null ? r.getBatchCode() : "");
+                    m.put("vacancyNumber", r.getVacancyNumber() != null ? r.getVacancyNumber() : 0);
+                    m.put("salary", r.getSalary() != null ? r.getSalary() : "");
+                    m.put("jobLocation", r.getJobLocation() != null ? r.getJobLocation() : "");
+                    m.put("closingDate", p.getClosingDate() != null ? p.getClosingDate().toString() : "");
+                    m.put("postDate", p.getPostDate() != null ? p.getPostDate().toLocalDate().toString() : "");
+                    m.put("status", r.getStatus().name());
+                    m.put("applicantCount", applicationRepository.findByRecruitmentId(r.getId()).size());
+                    return m;
+                }).toList();
+        return ResponseEntity.ok(result);
+    }
+
     // ── Registered Candidates (all INTERNAL applications) ──
 
     @GetMapping("/internal-applications")
@@ -591,17 +637,27 @@ public class RecruitmentController {
     public ResponseEntity<?> addCriteria(@PathVariable Integer id,
                                          @RequestBody Map<String, Object> body) {
         return recruitmentRepository.findById(id).map(r -> {
+            String criteriaName = body.getOrDefault("criteriaName", "").toString();
+            String type = body.getOrDefault("criteriaType", "TEXT").toString();
+
+            // Prevent duplicate criteria name for the same recruitment
+            boolean exists = criteriaRepository.findByRecruitmentId(id).stream()
+                    .anyMatch(c -> c.getCriteriaName().equalsIgnoreCase(criteriaName));
+            if (exists) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "Criteria type '" + criteriaName + "' already exists for this recruitment."));
+            }
+
             RecruitmentCriteria c = new RecruitmentCriteria();
             c.setRecruitment(r);
-            c.setCriteriaName(body.getOrDefault("criteriaName", "").toString());
-            String type = body.getOrDefault("criteriaType", "TEXT").toString();
+            c.setCriteriaName(criteriaName);
             c.setCriteriaType(RecruitmentCriteria.CriteriaType.valueOf(type));
             c.setIsRequired(body.get("isRequired") == null || Boolean.parseBoolean(body.get("isRequired").toString()));
             if (body.containsKey("weight")) {
                 c.setWeight(Double.parseDouble(body.get("weight").toString()));
             }
             criteriaRepository.save(c);
-            return ResponseEntity.ok(Map.of("message", "Criteria added."));
+            return ResponseEntity.ok((Object) Map.of("message", "Criteria added."));
         }).orElse(ResponseEntity.notFound().build());
     }
 
@@ -866,6 +922,8 @@ public class RecruitmentController {
         m.put("incrementStep", r.getIncrementStep() != null ? r.getIncrementStep() : "");
         m.put("employmentType", r.getEmploymentType() != null ? r.getEmploymentType() : "");
         m.put("budgetYear", r.getBudgetYear() != null ? r.getBudgetYear() : "");
+        m.put("contractStartDate", r.getContractStartDate() != null ? r.getContractStartDate().toString() : "");
+        m.put("contractEndDate", r.getContractEndDate() != null ? r.getContractEndDate().toString() : "");
         m.put("recruitmentType", r.getRecruitmentType() != null ? r.getRecruitmentType() : "");
         m.put("positionName", r.getPositionName() != null ? r.getPositionName() : "");
         m.put("classCode", r.getClassCode() != null ? r.getClassCode() : "");

@@ -1,5 +1,11 @@
 package com.recruitment.recruitmentbackend.service;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
 import com.recruitment.recruitmentbackend.entity.Applicant;
 import com.recruitment.recruitmentbackend.entity.Application;
 import com.recruitment.recruitmentbackend.entity.Employee;
@@ -10,12 +16,8 @@ import com.recruitment.recruitmentbackend.repository.ApplicationRepository;
 import com.recruitment.recruitmentbackend.repository.EmployeeRepository;
 import com.recruitment.recruitmentbackend.repository.RoleRepository;
 import com.recruitment.recruitmentbackend.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -82,6 +84,10 @@ public class ApplicantService {
                     if (app.getRecruitment() != null) {
                         employee.setPosition(app.getRecruitment().getJobTitle());
                         employee.setDepartment(app.getRecruitment().getDepartment());
+                        // Copy contract dates from the recruitment if it's a CONTRACT employment type
+                        if ("CONTRACT".equalsIgnoreCase(app.getRecruitment().getEmploymentType())) {
+                            employee.setContractEndDate(app.getRecruitment().getContractEndDate());
+                        }
                     }
                 });
 

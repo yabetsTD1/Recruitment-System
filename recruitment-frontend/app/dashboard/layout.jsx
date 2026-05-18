@@ -272,8 +272,33 @@ export default function DashboardLayout({ children }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
   const handleLogout = () => {
+    const token = localStorage.getItem("token");
     localStorage.clear();
-    router.push("/");
+
+    // Detect if the stored token is a Keycloak token by checking the issuer claim
+    let isKeycloakToken = false;
+    if (token) {
+      try {
+        const parts = token.split(".");
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+          if (payload.iss && payload.iss.includes("localhost:9090")) {
+            isKeycloakToken = true;
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (isKeycloakToken) {
+      // Keycloak end-session — kills the SSO session so clicking SSO again shows the login form
+      const keycloakLogoutUrl =
+        "http://localhost:9090/realms/recruitment-system/protocol/openid-connect/logout" +
+        "?post_logout_redirect_uri=" + encodeURIComponent("http://localhost:3000/login?logged_out=1") +
+        "&client_id=recruitment-app";
+      window.location.href = keycloakLogoutUrl;
+    } else {
+      router.push("/login");
+    }
   };
   const isActive = (href) => pathname === href;
   const isParentActive = (children) =>

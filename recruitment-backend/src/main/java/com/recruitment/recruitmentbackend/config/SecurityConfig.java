@@ -3,6 +3,7 @@ package com.recruitment.recruitmentbackend.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -22,22 +23,48 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
+    private final KeycloakJwtConverter keycloakJwtConverter;
 
+    /**
+     * Chain 1 (Order 1) — handles public endpoints with NO token validation at all.
+     * /api/auth/** and /api/public/** are fully open — no Bearer token processing.
+     */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Order(1)
+    public SecurityFilterChain publicFilterChain(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher("/api/auth/**", "/api/public/**", "/h2-console/**")
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+            .headers(h -> h.frameOptions(f -> f.disable()));
+
+        return http.build();
+    }
+
+    /**
+     * Chain 2 (Order 2) — all other endpoints require authentication.
+     * Accepts BOTH local JWT tokens (via JwtFilter) and Keycloak tokens (via oauth2ResourceServer).
+     */
+    @Bean
+    @Order(2)
+    public SecurityFilterChain securedFilterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/public/**").permitAll()
-                .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/api/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                 .anyRequest().authenticated()
             )
-            .headers(h -> h.frameOptions(f -> f.disable())) // for H2 console
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+            .headers(h -> h.frameOptions(f -> f.disable()))
+            // Local JWT filter — handles tokens issued by /api/auth/login
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            // Keycloak resource server — validates Keycloak-issued JWTs
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(keycloakJwtConverter))
+            );
 
         return http.build();
     }

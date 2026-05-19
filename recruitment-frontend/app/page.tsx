@@ -5,6 +5,21 @@ import { useState, useEffect } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
+const KEYCLOAK_URL = "http://localhost:9090";
+const KEYCLOAK_REALM = "recruitment-system";
+const KEYCLOAK_CLIENT_ID = "recruitment-app";
+
+function goToKeycloak() {
+  const redirectUri = `${window.location.origin}/login`;
+  const params = new URLSearchParams({
+    client_id: KEYCLOAK_CLIENT_ID,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: "openid profile email",
+  });
+  window.location.href = `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/auth?${params}`;
+}
+
 export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [search, setSearch] = useState("");
@@ -66,13 +81,15 @@ export default function Home() {
                 {item.label}
               </Link>
             ))}
-            <Link href="/login" style={{
+            <button onClick={goToKeycloak} style={{
               marginLeft: "8px",
-              background: "#2980b9", color: "white", textDecoration: "none",
+              background: "#2980b9", color: "white",
+              border: "none", cursor: "pointer",
               padding: "7px 18px", borderRadius: "4px", fontSize: "13px", fontWeight: "600",
+              fontFamily: "inherit",
             }}>
               Staff Login
-            </Link>
+            </button>
             <Link href="/external-auth" style={{
               marginLeft: "6px",
               background: "transparent", color: "white", textDecoration: "none",
